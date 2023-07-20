@@ -283,22 +283,19 @@ class OptimParam(_Param):
     def _param_groups(self, lr, weight_decay):
         """Parse setting for multiple group of parameters."""
         # learning rates and weight decay
-        if not isinstance(lr, list):
-            lr = [lr]
-        if not isinstance(weight_decay, list):
-            weight_decay = [weight_decay]
-        num_lrs, lrs = len(lr), lr
-        num_wds, wds = len(weight_decay), weight_decay
-        if num_lrs == 1 and num_wds > 1:
-            lrs = lrs * num_wds
-        elif num_lrs > 1 and num_wds == 1:
-            wds = wds * num_lrs
-        elif num_lrs > 1 and num_wds > 1:
-            assert num_lrs == num_wds, (
-                "Number of learning rate doesn't",
-                "the number of weight decay.",
-            )
-        groups = [dict(lr=lr, weight_decay=wd) for lr, wd in zip(lrs, wds)]
+        assert isinstance(lr, dict) and isinstance(weight_decay, dict)
+        num_lrs = len(lr)
+        num_wds = len(weight_decay)
+
+        assert num_lrs == num_wds, (
+            "Number of learning rate doesn't",
+            "the number of weight decay.",
+        )
+        groups = {}
+        for name, lr_value in lr.items():
+            assert name in weight_decay
+            groups[name] = dict(lr=lr_value, weight_decay=weight_decay[name])
+        
         return groups
 
     def _optim_SGD(self, param=None):
@@ -315,6 +312,7 @@ class OptimParam(_Param):
         if param is None:
             param = dict()
         lr_param = dict(
+            ##TODO: Change LR scheduler or make `step_size` smaller or option
             step_size=param.get("step_size", 30), gamma=param.get("gamma", 0.1)
         )
         return lr_param
@@ -431,6 +429,43 @@ class FashionExtractParam(_Param):
         log_level=None,  # log level
         feature_folder=None,  # folder to saving features
         gpus=None,  # gpus
+    )
+
+    def setup(self):
+        # If set specific configuration for training
+        if not (self.train_data_param is None and self.test_data_param is None):
+            param = self.data_param or dict()
+            train_param = self.train_data_param or dict()
+            test_param = self.test_data_param or dict()
+            train_param.update(param)
+            test_param.update(param)
+            self.train_data_param = DataParam(**train_param)
+            self.test_data_param = DataParam(**test_param)
+            self.data_param = None
+
+        if self.data_param:
+            param = self.data_param
+            self.data_param = DataParam(**param)
+
+        if self.net_param:
+            self.net_param = NetParam(**self.net_param)
+
+
+class FashionDeployParam(_Param):
+    """_Param for Hash for All Fashion Feature Deployment."""
+
+    default = dict(
+        data_param=None,
+        train_data_param=None,
+        test_data_param=None,
+        net_param=None,
+        load_trained=None,  # load pre-trained model
+        gpus=None,  # gpus
+        score_type_selection=None,
+        feature_type_selection=None,
+        num_recommends_per_choice=None,
+        num_recommends_for_composition=None,
+        get_composed_recommendation=None,
     )
 
     def setup(self):

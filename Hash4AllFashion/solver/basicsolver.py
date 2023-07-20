@@ -50,10 +50,14 @@ class BasicSolver(object):
                 len(groups), num_child
             )
         param_groups = []
-        for child, param in zip(self.net.children(), groups):
+        ##TODO: priority. Set lr param according to child name
+        for name, child in self.net.named_children():
+            assert name in groups
+            param = groups[name]
             param_group = {"params": child.parameters()}
             param_group.update(param)
             param_groups.append(param_group)
+        
         self.optimizer = optimizer(param_groups, **optim_param.grad_param)
         # Set learning rate policy
         enum_lr_policy = utils.get_named_class(torch.optim.lr_scheduler)

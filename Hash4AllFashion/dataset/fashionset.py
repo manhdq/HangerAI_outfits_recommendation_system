@@ -95,7 +95,7 @@ class Datum(object):
         images = []
         for id_name in indices:
             if id_name == -1:
-                ##TODO: Dynamic this later
+                ##TODO: Dynamic this later if we use `-1` as an apparel
                 img = torch.zeros((3, 300, 300), dtype=torch.float32)
             else:
                 img = self.load_image(id_name)
@@ -201,7 +201,7 @@ class FashionDataset(Dataset):
         else:
             cate_selection = cate_selection + ["compatible",]
 
-        ##TODO: Simplify this later
+        ##TODO: Simplify this later, Should we register this args?
         self.cate_idxs = [cfg.CateIdx[col] for col in cate_selection[:-1]]
         self.cate_idxs_to_tensor_idxs = {cate_idx: tensor_idx for cate_idx, tensor_idx in zip(self.cate_idxs, range(len(self.cate_idxs)))}
         self.tensor_idxs_to_cate_idxs = {v: k for k, v in self.cate_idxs_to_tensor_idxs.items()}
@@ -353,6 +353,10 @@ class FashionDataset(Dataset):
         ##TODO: Modify index for tuple selection for posi and nega (maybe shuffle the df each epoch)
         posi_idxs, posi_tpl = self.get_tuple(self.posi_df, int(index // self.ratio))
         nega_idxs, nega_tpl = self.get_tuple(self.nega_df, index)
+
+        posi_idxs = list(map(self.cate_idxs_to_tensor_idxs.get, posi_idxs))  ## Mapping to tensor idxs for classification training
+        nega_idxs = list(map(self.cate_idxs_to_tensor_idxs.get, nega_idxs))
+        
         return ((posi_idxs, self.datum.get(posi_tpl)), (nega_idxs, self.datum.get(nega_tpl)))
 
     def __getitem__(self, index):
