@@ -1,7 +1,17 @@
 import base64
-import numpy as np
 from PIL import Image
 from io import BytesIO
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def hash(password: str):
+    return pwd_context.hash(password)
+
+
+def verify(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def base64_to_image(base64_string):

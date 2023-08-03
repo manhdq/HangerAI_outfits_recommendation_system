@@ -3,11 +3,11 @@ import time
 import copy
 import numpy as np
 import pickle5 as pickle
-from PIL import Image
 
 import torch
 import torch.nn.functional as F
 
+from . import models
 from Hash4AllFashion import utils
 from Hash4AllFashion.utils import config as cfg
 from Hash4AllFashion.model import FashionNet
@@ -46,15 +46,12 @@ def get_net(config):
 
 
 class Pipeline:
-    def __init__(self, config, cursor, table_name, storage_path):
+    def __init__(self, config, storage_path):
         self.net = get_net(config)
         self.device = config.gpus[0]
         self.transforms = get_img_trans("val", config.test_data_param.image_size)
 
         self.hash_types = config.net_param.hash_types
-
-        self.cursor = cursor
-        self.table_name = table_name
 
         self.type_selection = {
             "latent": {
@@ -101,7 +98,7 @@ class Pipeline:
 
         return lci_v, lci_s, bci_v, bci_s, ID2CATE[cate_predict]
 
-    def get_inputs(self, chosen, recommend_choices):
+    def get_inputs(self, chosen, recommend_choices, db, user_id):
         inputs = [chosen]
 
         def add_inputs(inputs, choices):
@@ -130,15 +127,15 @@ class Pipeline:
         recommend_choices = copy.deepcopy(recommend_choices)
         for k, v in recommend_choices.items():
             if isinstance(v, str) and v=="all":
-                self.cursor.execute(f"""SELECT * FROM {self.table_name} WHERE category = '{k}'""")
-                apparels = self.cursor.fetchall()
-                recommend_choices[k] = [apparel["name"] for apparel in apparels]
+                items = db.query(models.Apparel).filter(models.Apparel.user_id==user_id,
+                                                        models.Apparel.category==k).all()
+                recommend_choices[k] = [item.name for item in items]
             elif isinstance(v, (tuple, list)):  ##TODO: Remove redundancy
                 if isinstance(v[0], int):
                     assert len(v) == 2
-                    self.cursor.execute(f"""SELECT * FROM {self.table_name} WHERE category = '{k}'""")
-                    apparels = self.cursor.fetchall()
-                    recommend_choices[k] = [apparel["name"] for apparel in apparels][v[0]:v[1]]
+                    items = db.query(models.Apparel).filter(models.Apparel.user_id==user_id,
+                                                            models.Apparel.category==k).all()
+                    recommend_choices[k] = [item.name for item in items][v[0]:v[1]]
                 else:
                     assert isinstance(v[0], str)
                     recommend_choices[k] = copy.deepcopy(v)
@@ -146,8 +143,9 @@ class Pipeline:
         inputs = add_inputs(inputs, recommend_choices)
         return inputs
 
-    def compute_score(self, net, input, scale=10.0):
-        ilatents = [self.storage[v][self.type_selection] for _, v in input.items()]
+    def compute_score(self, net, input, user_id, scale=10.0):
+        # print(self.storage[user_id].keys())
+        ilatents = [self.storage[user_id][v][self.type_selection] for _, v in input.items()]
         ilatents = np.stack(ilatents)
         ilatents = torch.from_numpy(ilatents).cuda(device=self.device)
 
@@ -166,14 +164,14 @@ class Pipeline:
         score = score_i * (scale * 2.0)
         return score.cpu().detach().item()
 
-    def outfit_recommend(self, chosen, recommend_choices):
+    def outfit_recommend(self, chosen, recommend_choices, db, user_id):
         start_time = time.time()
         outputs = {}
         for cate_choice in recommend_choices:
             scores = []
-            inputs = self.get_inputs(chosen, {cate_choice: "all"})
+            inputs = self.get_inputs(chosen, {cate_choice: "all"}, db, user_id)
             for i, input in enumerate(inputs):
-                score = self.compute_score(self.net, input)
+                score = self.compute_score(self.net, input, user_id)
                 scores.append(score)
             target_arg = sorted(range(len(scores)), key=lambda k: -scores[k])
 
@@ -182,10 +180,10 @@ class Pipeline:
 
         if self.get_composed_recommendation:  # Recommend outfit from recommended above
             scores = []
-            inputs = self.get_inputs(chosen, outputs)
+            inputs = self.get_inputs(chosen, outputs, db, user_id)
             
             for i, input in enumerate(inputs):
-                score = self.compute_score(self.net, input)
+                score = self.compute_score(self.net, input, user_id)
                 scores.append(score)
             target_arg = sorted(range(len(scores)), key=lambda k: -scores[k])
             recommeded_outfits = [inputs[i] for i in target_arg[:self.num_recommends_for_composition]]
