@@ -15,8 +15,8 @@ from Hash4AllFashion.dataset.transforms import get_img_trans
 
 
 ##TODO: Change this
-ID2CATE = {0:"top", 1:"bottom", 2:"bag", 3:"outerwear", 4:"shoe"}
-CATE2ID = {"top":0, "bottom":1, "bag":2, "outerwear":3, "shoe":4}
+ID2CATE = {0: "top", 1: "bottom", 2: "bag", 3: "outerwear", 4: "shoe"}
+CATE2ID = {"top": 0, "bottom": 1, "bag": 2, "outerwear": 3, "shoe": 4}
 
 NO_WEIGHTED_HASH = 0
 WEIGHTED_HASH_U = 1
@@ -28,12 +28,11 @@ def get_net(config):
     """Get network."""
     # Get net param
     net_param = config.net_param
-    
+
     assert config.load_trained is not None
 
     # Dimension of latent codes
-    net = FashionNet(net_param,
-                    config.train_data_param.cate_selection)
+    net = FashionNet(net_param, config.train_data_param.cate_selection)
     # Load model from pre-trained file
     num_devices = torch.cuda.device_count()
     map_location = {"cuda:{}".format(i): "cpu" for i in range(num_devices)}
@@ -63,7 +62,7 @@ class Pipeline:
                 "semantic": "bci_s",
             },
         }[config.score_type_selection][config.feature_type_selection]
-        
+
         self.num_recommends_per_choice = config.num_recommends_per_choice
         self.num_recommends_for_composition = config.num_recommends_for_composition
         self.get_composed_recommendation = config.get_composed_recommendation
@@ -86,9 +85,11 @@ class Pipeline:
         img = img.unsqueeze(0)
         img = utils.to_device(img, self.device)
         with torch.no_grad():
-            lcis_v, lcis_s, bcis_v, bcis_s, visual_logits = self.net.extract_features(img)
+            lcis_v, lcis_s, bcis_v, bcis_s, visual_logits = self.net.extract_features(
+                img
+            )
             visual_fc = F.softmax(visual_logits, dim=1)
-        
+
         ##TODO: Set semantic feats later
         lci_v = lcis_v[0].cpu().detach().numpy()
         lci_s = None
@@ -126,16 +127,27 @@ class Pipeline:
         ## Get list of recommend_choices
         recommend_choices = copy.deepcopy(recommend_choices)
         for k, v in recommend_choices.items():
-            if isinstance(v, str) and v=="all":
-                items = db.query(models.Apparel).filter(models.Apparel.user_id==user_id,
-                                                        models.Apparel.category==k).all()
+            if isinstance(v, str) and v == "all":
+                items = (
+                    db.query(models.Apparel)
+                    .filter(
+                        models.Apparel.user_id == user_id, models.Apparel.category == k
+                    )
+                    .all()
+                )
                 recommend_choices[k] = [item.name for item in items]
             elif isinstance(v, (tuple, list)):  ##TODO: Remove redundancy
                 if isinstance(v[0], int):
                     assert len(v) == 2
-                    items = db.query(models.Apparel).filter(models.Apparel.user_id==user_id,
-                                                            models.Apparel.category==k).all()
-                    recommend_choices[k] = [item.name for item in items][v[0]:v[1]]
+                    items = (
+                        db.query(models.Apparel)
+                        .filter(
+                            models.Apparel.user_id == user_id,
+                            models.Apparel.category == k,
+                        )
+                        .all()
+                    )
+                    recommend_choices[k] = [item.name for item in items][v[0] : v[1]]
                 else:
                     assert isinstance(v[0], str)
                     recommend_choices[k] = copy.deepcopy(v)
@@ -145,7 +157,9 @@ class Pipeline:
 
     def compute_score(self, net, input, user_id, scale=10.0):
         # print(self.storage[user_id].keys())
-        ilatents = [self.storage[user_id][v][self.type_selection] for _, v in input.items()]
+        ilatents = [
+            self.storage[user_id][v][self.type_selection] for _, v in input.items()
+        ]
         ilatents = np.stack(ilatents)
         ilatents = torch.from_numpy(ilatents).cuda(device=self.device)
 
@@ -175,20 +189,25 @@ class Pipeline:
                 scores.append(score)
             target_arg = sorted(range(len(scores)), key=lambda k: -scores[k])
 
-            cate_recommended = [inputs[i][cate_choice] for i in target_arg[:self.num_recommends_per_choice]]
+            cate_recommended = [
+                inputs[i][cate_choice]
+                for i in target_arg[: self.num_recommends_per_choice]
+            ]
             outputs[cate_choice] = cate_recommended
 
         if self.get_composed_recommendation:  # Recommend outfit from recommended above
             scores = []
             inputs = self.get_inputs(chosen, outputs, db, user_id)
-            
+
             for i, input in enumerate(inputs):
                 score = self.compute_score(self.net, input, user_id)
                 scores.append(score)
             target_arg = sorted(range(len(scores)), key=lambda k: -scores[k])
-            recommeded_outfits = [inputs[i] for i in target_arg[:self.num_recommends_for_composition]]
+            recommeded_outfits = [
+                inputs[i] for i in target_arg[: self.num_recommends_for_composition]
+            ]
 
             outputs["outfit_recommend"] = recommeded_outfits
-        
+
         outputs["time"] = time.time() - start_time
         return outputs

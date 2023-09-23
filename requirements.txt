@@ -1,8 +1,15 @@
+fastapi
+uvicorn
 opencv-python
 numpy
-torch
-torchvision
 scikit-learn
 lmdb
 tensorboardX
 pickle5
+sqlalchemy
+psycopg2-binary
+passlib
+pydantic[email]
+python-jose[cryptography]
+python-multipart
+pyyaml

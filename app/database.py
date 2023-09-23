@@ -4,14 +4,16 @@ from sqlalchemy.orm import sessionmaker
 
 
 ##TODO: Setup os environment for these parameters
-USERNAME = "demo"
-PASSWORD = "210301"
+USERNAME = "leonard"
+PASSWORD = "123"
 IP_ADDRESS = "localhost"
-DATABASE_NAME = "fastapi"
+DATABASE_NAME = "mydb"
 
 # Set up database
 # SQLALCHEMY_DATABASE_URL = "postgresql://<username>:<passwoard>@<ip-address/hostname>/<database_name>"
-SQLALCHEMY_DATABASE_URL = f"postgresql://{USERNAME}:{PASSWORD}@{IP_ADDRESS}/{DATABASE_NAME}"
+SQLALCHEMY_DATABASE_URL = (
+    f"postgresql://{USERNAME}:{PASSWORD}@{IP_ADDRESS}/{DATABASE_NAME}"
+)
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 

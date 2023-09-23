@@ -7,7 +7,7 @@ from .meter import MeterFactory
 
 class Tracer(object):
     """Class for history tracer.
-    
+
     Parameter
     ---------
     win_size: Set the meter for tracer.

@@ -28,6 +28,7 @@ class ApparelUpdate(ApparelBase):
 class Apparel(ApparelBase):
     user_id: int
     created_at: datetime
+
     class Config:
         orm_mode = True
 
@@ -38,6 +39,7 @@ class OutfitsRecommendation(BaseModel):
     1: Enable recommendation
     ***.jpg: Input for recommendation
     """
+
     top: Union[str, int]
     bottom: Union[str, int]
     bag: Union[str, int]

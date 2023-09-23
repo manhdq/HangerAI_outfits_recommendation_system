@@ -20,7 +20,7 @@ from .transforms import get_img_trans
 def count_pairwise(count_array: np.ndarray, num_pairwise: int):
     """
     Get number of pair according to num_pairwise in count_array input
-    
+
     params:
         count_array: np.ndarray (N,)
         num_pairwise: int
@@ -49,16 +49,18 @@ class Datum(object):
     Abstract class for Fashion Dataset.
     """
 
-    def __init__(self,
-                use_semantic=False,
-                semantic=None,
-                use_visual=False,
-                image_dir="",
-                lmdb_env=None,
-                transforms=None,):
+    def __init__(
+        self,
+        use_semantic=False,
+        semantic=None,
+        use_visual=False,
+        image_dir="",
+        lmdb_env=None,
+        transforms=None,
+    ):
         self.cate_dict = cfg.CateIdx
         self.cate_name = cfg.CateName
-        
+
         self.use_semantic = use_semantic
         self.semantic = semantic
         self.use_visual = use_visual
@@ -69,7 +71,7 @@ class Datum(object):
     def load_image(self, id_name):
         """
         PIL loader for loading image.
-        
+
         Return
         ------
         img: The image of idx name in image directory, type of PIL.Image.
@@ -129,13 +131,20 @@ class FashionExtractionDataset(Dataset):
         if cate_selection == "all":
             cate_selection = list(self.df.columns)
         else:
-            cate_selection = cate_selection + ["compatible",]
+            cate_selection = cate_selection + [
+                "compatible",
+            ]
 
         ##TODO: Simplify this later
         self.cate_idxs = [cfg.CateIdx[col] for col in cate_selection[:-1]]
-        self.cate_idxs_to_tensor_idxs = {cate_idx: tensor_idx for cate_idx, tensor_idx in zip(self.cate_idxs, range(len(self.cate_idxs)))}
-        self.tensor_idxs_to_cate_idxs = {v: k for k, v in self.cate_idxs_to_tensor_idxs.items()}
-        
+        self.cate_idxs_to_tensor_idxs = {
+            cate_idx: tensor_idx
+            for cate_idx, tensor_idx in zip(self.cate_idxs, range(len(self.cate_idxs)))
+        }
+        self.tensor_idxs_to_cate_idxs = {
+            v: k for k, v in self.cate_idxs_to_tensor_idxs.items()
+        }
+
         self.df = self.get_new_data_with_new_cate_selection(self.df, cate_selection)
 
         self.df = self.df.drop("compatible", axis=1)
@@ -154,7 +163,7 @@ class FashionExtractionDataset(Dataset):
             use_visual=param.use_visual,
             image_dir=param.image_dir,
             lmdb_env=lmdb_env,
-            transforms=transforms
+            transforms=transforms,
         )
 
     def get_new_data_with_new_cate_selection(self, df, cate_selection):
@@ -190,33 +199,64 @@ class FashionDataset(Dataset):
         # Before processing
         num_row_before = len(self.df)
         pairwise_count_before_list = self.get_pair_list(num_pairwise_list, self.df)
-        self.logger.info(f"+ Before: Num row: {utils.colour(num_row_before)} - " + \
-                        " - ".join([f"pairwise {num_pairwise}: {utils.colour(pairwise_count_before)}" for \
-                                    num_pairwise, pairwise_count_before in zip(num_pairwise_list, pairwise_count_before_list)]))
+        self.logger.info(
+            f"+ Before: Num row: {utils.colour(num_row_before)} - "
+            + " - ".join(
+                [
+                    f"pairwise {num_pairwise}: {utils.colour(pairwise_count_before)}"
+                    for num_pairwise, pairwise_count_before in zip(
+                        num_pairwise_list, pairwise_count_before_list
+                    )
+                ]
+            )
+        )
         self.logger.info("")
 
         # After processing
         if cate_selection == "all":
             cate_selection = list(self.df.columns)
         else:
-            cate_selection = cate_selection + ["compatible",]
+            cate_selection = cate_selection + [
+                "compatible",
+            ]
 
         ##TODO: Simplify this later, Should we register this args?
         self.cate_idxs = [cfg.CateIdx[col] for col in cate_selection[:-1]]
-        self.cate_idxs_to_tensor_idxs = {cate_idx: tensor_idx for cate_idx, tensor_idx in zip(self.cate_idxs, range(len(self.cate_idxs)))}
-        self.tensor_idxs_to_cate_idxs = {v: k for k, v in self.cate_idxs_to_tensor_idxs.items()}
-        
+        self.cate_idxs_to_tensor_idxs = {
+            cate_idx: tensor_idx
+            for cate_idx, tensor_idx in zip(self.cate_idxs, range(len(self.cate_idxs)))
+        }
+        self.tensor_idxs_to_cate_idxs = {
+            v: k for k, v in self.cate_idxs_to_tensor_idxs.items()
+        }
+
         self.df = self.get_new_data_with_new_cate_selection(self.df, cate_selection)
         num_row_after = len(self.df)
         pairwise_count_after_list = self.get_pair_list(num_pairwise_list, self.df)
-        self.logger.info(f"+ After: Num row: {utils.colour(num_row_after)} - " + \
-                        " - ".join([f"pairwise {num_pairwise}: {utils.colour(pairwise_count_after)}" for \
-                                    num_pairwise, pairwise_count_after in zip(num_pairwise_list, pairwise_count_after_list)]))
+        self.logger.info(
+            f"+ After: Num row: {utils.colour(num_row_after)} - "
+            + " - ".join(
+                [
+                    f"pairwise {num_pairwise}: {utils.colour(pairwise_count_after)}"
+                    for num_pairwise, pairwise_count_after in zip(
+                        num_pairwise_list, pairwise_count_after_list
+                    )
+                ]
+            )
+        )
         self.logger.info("")
 
-        self.posi_df_ori = self.df[self.df.compatible == 1].reset_index(drop=True).drop("compatible", axis=1)
-        self.nega_df_ori = self.df[self.df.compatible == 0].reset_index(drop=True).drop("compatible", axis=1)
-        
+        self.posi_df_ori = (
+            self.df[self.df.compatible == 1]
+            .reset_index(drop=True)
+            .drop("compatible", axis=1)
+        )
+        self.nega_df_ori = (
+            self.df[self.df.compatible == 0]
+            .reset_index(drop=True)
+            .drop("compatible", axis=1)
+        )
+
         assert len(self.posi_df_ori) + len(self.nega_df_ori) == len(self.df)
 
         self.posi_df = self.posi_df_ori.copy()
@@ -235,7 +275,7 @@ class FashionDataset(Dataset):
             use_visual=param.use_visual,
             image_dir=param.image_dir,
             lmdb_env=lmdb_env,
-            transforms=transforms
+            transforms=transforms,
         )
         self.using_max_num_pairwise = param.using_max_num_pairwise
 
@@ -258,7 +298,7 @@ class FashionDataset(Dataset):
         ], "Unknown negative mode."
         if self.param.data_mode == "PosiOnly":
             self.logger.warning(
-                f"Current data-mode is {utils.colour(self.param.data_mode, 'Red')}." \
+                f"Current data-mode is {utils.colour(self.param.data_mode, 'Red')}."
                 "The negative mode will be ignored!",
             )
         else:
@@ -266,7 +306,9 @@ class FashionDataset(Dataset):
             self.param.nega_mode = mode
             self.make_nega()
 
-    def _shuffle_nega(self,):
+    def _shuffle_nega(
+        self,
+    ):
         return self.nega_df_ori.sample(frac=1).reset_index(drop=True)
 
     def make_nega(self, ratio=1):
@@ -279,7 +321,7 @@ class FashionDataset(Dataset):
             ##TODO: Random the negative dataframe from positive one
             raise
         else:
-            raise ##TODO:
+            raise  ##TODO:
         self.logger.info("Done making negative outfits!")
 
     ##TODO: Modify this func
@@ -290,8 +332,8 @@ class FashionDataset(Dataset):
             "PosiOnly",
             "NegaOnly",
             "PairWise",
-            "TripleWise"
-        ], (f"Unknown data mode: {mode}")
+            "TripleWise",
+        ], f"Unknown data mode: {mode}"
         self.logger.info(f"Set data mode to {utils.colour(mode)}")
         self.param.data_mode = mode
 
@@ -326,7 +368,7 @@ class FashionDataset(Dataset):
         # for i, row in df.iterrows()
         df_array = df.to_numpy()[..., :-1]  # Eliminate compatible
         df_count = (df_array != -1).astype(int).sum(axis=-1)
-        
+
         pairwise_count_list = []
         for num_pairwise in num_pairwise_list:
             pairwise_count_list.append(count_pairwise(df_count, num_pairwise))
@@ -354,22 +396,27 @@ class FashionDataset(Dataset):
         posi_idxs, posi_tpl = self.get_tuple(self.posi_df, int(index // self.ratio))
         nega_idxs, nega_tpl = self.get_tuple(self.nega_df, index)
 
-        posi_idxs = list(map(self.cate_idxs_to_tensor_idxs.get, posi_idxs))  ## Mapping to tensor idxs for classification training
+        posi_idxs = list(
+            map(self.cate_idxs_to_tensor_idxs.get, posi_idxs)
+        )  ## Mapping to tensor idxs for classification training
         nega_idxs = list(map(self.cate_idxs_to_tensor_idxs.get, nega_idxs))
-        
-        return ((posi_idxs, self.datum.get(posi_tpl)), (nega_idxs, self.datum.get(nega_tpl)))
+
+        return (
+            (posi_idxs, self.datum.get(posi_tpl)),
+            (nega_idxs, self.datum.get(nega_tpl)),
+        )
 
     def __getitem__(self, index):
         """Get one tuple of examples by index."""
         return dict(
             PairWise=self._PairWise,
-        )[self.param.data_mode](index)
+        )[
+            self.param.data_mode
+        ](index)
 
     def __len__(self):
         """Return the size of dataset."""
-        return dict(
-            PairWise=int(self.ratio * self.num_posi)
-        )[self.param.data_mode]
+        return dict(PairWise=int(self.ratio * self.num_posi))[self.param.data_mode]
 
     @property
     def num_posi(self):
@@ -389,23 +436,29 @@ class FashionLoader(object):
         self.logger = logger
 
         self.cate_selection = param.cate_selection
-        self.cate_not_selection = [cate for cate in cfg.CateName if cate not in param.cate_selection]
+        self.cate_not_selection = [
+            cate for cate in cfg.CateName if cate not in param.cate_selection
+        ]
 
         self.logger.info(
             f"Loading data ({utils.colour(param.data_set)}) in phase ({utils.colour(param.phase)})"
         )
         self.logger.info(
-            f"- Selected apparel: " + ", ".join([utils.colour(cate) for cate in self.cate_selection])
+            f"- Selected apparel: "
+            + ", ".join([utils.colour(cate) for cate in self.cate_selection])
         )
         self.logger.info(
-            f"- Not selected apparel: " + ", ".join([utils.colour(cate, "Red") for cate in self.cate_not_selection])
+            f"- Not selected apparel: "
+            + ", ".join([utils.colour(cate, "Red") for cate in self.cate_not_selection])
         )
         self.logger.info(
             f"- Data loader configuration: batch size ({utils.colour(param.batch_size)}), number of workers ({utils.colour(param.num_workers)})"
         )
         transforms = get_img_trans(param.phase, param.image_size)
-        self.dataset = FashionDataset(param, transforms, self.cate_selection.copy(), logger)
-        
+        self.dataset = FashionDataset(
+            param, transforms, self.cate_selection.copy(), logger
+        )
+
         self.loader = DataLoader(
             dataset=self.dataset,
             batch_size=param.batch_size,
@@ -473,22 +526,34 @@ def outfit_fashion_collate(batch):
         ##TODO: Describe later
     --------
     """
-    posi_mask, posi_idxs_out, posi_imgs_out, nega_mask, nega_idxs_out, nega_imgs_out = \
-            [], [], [], [], [], []
-    
+    posi_mask, posi_idxs_out, posi_imgs_out, nega_mask, nega_idxs_out, nega_imgs_out = (
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+    )
+
     for i, sample in enumerate(batch):
         (posi_idxs, posi_imgs), (nega_idxs, nega_imgs) = sample
 
-        posi_mask.extend([i]*len(posi_idxs))
+        posi_mask.extend([i] * len(posi_idxs))
         posi_idxs_out.extend(posi_idxs)
         posi_imgs_out.extend(posi_imgs)
 
-        nega_mask.extend([i]*len(nega_idxs))
+        nega_mask.extend([i] * len(nega_idxs))
         nega_idxs_out.extend(nega_idxs)
         nega_imgs_out.extend(nega_imgs)
-    
-    return torch.Tensor(posi_mask).to(torch.long), torch.Tensor(posi_idxs_out).to(torch.long), torch.stack(posi_imgs_out, 0), \
-            torch.Tensor(nega_mask).to(torch.long), torch.Tensor(nega_idxs_out).to(torch.long), torch.stack(nega_imgs_out, 0)
+
+    return (
+        torch.Tensor(posi_mask).to(torch.long),
+        torch.Tensor(posi_idxs_out).to(torch.long),
+        torch.stack(posi_imgs_out, 0),
+        torch.Tensor(nega_mask).to(torch.long),
+        torch.Tensor(nega_idxs_out).to(torch.long),
+        torch.stack(nega_imgs_out, 0),
+    )
 
 
 # --------------------------

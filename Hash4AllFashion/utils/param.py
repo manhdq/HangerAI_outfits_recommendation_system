@@ -143,18 +143,35 @@ class DataParam(_Param):
         "data_csv",
     ]
 
-    def setup(self,):
+    def setup(
+        self,
+    ):
         """Load args."""
         ##TODO: What is it??
         if self.fsl:
             self.data_set += "_fsl"
         self.image_root = self.image_root or self.data_root
-        
+
         self.cate_map = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        self.cate_name = ["all-body", "bottom", "top", "outerwear", "bag", "shoe",
-                        "accessory", "scarf", "hat", "sunglass", "jewellery"]
-        self.id2cat = {cat_id: cat_name for cat_id, cat_name in zip(self.cate_map, self.cate_name)}
-        self.cat2id = {cat_name: cat_id for cat_id, cat_name in zip(self.cate_map, self.cate_name)}
+        self.cate_name = [
+            "all-body",
+            "bottom",
+            "top",
+            "outerwear",
+            "bag",
+            "shoe",
+            "accessory",
+            "scarf",
+            "hat",
+            "sunglass",
+            "jewellery",
+        ]
+        self.id2cat = {
+            cat_id: cat_name for cat_id, cat_name in zip(self.cate_map, self.cate_name)
+        }
+        self.cat2id = {
+            cat_name: cat_id for cat_id, cat_name in zip(self.cate_map, self.cate_name)
+        }
 
         if self.shuffle is None:
             self.shuffle = self.shuffle or (self.phase == "train")
@@ -245,12 +262,27 @@ class NetParam(_Param):
     def setup(self):
         if self.use_semantic and self.use_visual:
             self.margin = self.margin or 0.1
-        
+
         self.cate_map = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        self.cate_name = ["all-body", "bottom", "top", "outerwear", "bag", "shoe",
-                        "accessory", "scarf", "hat", "sunglass", "jewellery"]
-        self.id2cat = {cat_id: cat_name for cat_id, cat_name in zip(self.cate_map, self.cate_name)}
-        self.cat2id = {cat_name: cat_id for cat_id, cat_name in zip(self.cate_map, self.cate_name)}
+        self.cate_name = [
+            "all-body",
+            "bottom",
+            "top",
+            "outerwear",
+            "bag",
+            "shoe",
+            "accessory",
+            "scarf",
+            "hat",
+            "sunglass",
+            "jewellery",
+        ]
+        self.id2cat = {
+            cat_id: cat_name for cat_id, cat_name in zip(self.cate_map, self.cate_name)
+        }
+        self.cat2id = {
+            cat_name: cat_id for cat_id, cat_name in zip(self.cate_map, self.cate_name)
+        }
 
 
 class OptimParam(_Param):
@@ -295,7 +327,7 @@ class OptimParam(_Param):
         for name, lr_value in lr.items():
             assert name in weight_decay
             groups[name] = dict(lr=lr_value, weight_decay=weight_decay[name])
-        
+
         return groups
 
     def _optim_SGD(self, param=None):
@@ -313,7 +345,8 @@ class OptimParam(_Param):
             param = dict()
         lr_param = dict(
             ##TODO: Change LR scheduler or make `step_size` smaller or option
-            step_size=param.get("step_size", 30), gamma=param.get("gamma", 0.1)
+            step_size=param.get("step_size", 30),
+            gamma=param.get("gamma", 0.1),
         )
         return lr_param
 
@@ -329,7 +362,7 @@ class OptimParam(_Param):
             verbose=True,
         )
         return lr_param
-        
+
 
 class SolverParam(_Param):
     """Parameters class for solver."""

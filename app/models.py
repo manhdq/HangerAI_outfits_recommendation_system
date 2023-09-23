@@ -14,11 +14,15 @@ class Apparel(Base):
     category = Column(String, nullable=False)
     price = Column(Integer, nullable=False, default=-1)
     user_id = Column(Integer, nullable=False, default=0)
-    created_at = Column(TIMESTAMP(timezone=True),
-                        nullable=False, server_default=text('now()'))
-    
+    created_at = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
+    )
+
     __table_args__ = (
-        CheckConstraint(category.in_(['top', 'bottom', 'bag', 'outerwear', 'shoe']), name='category_check'),
+        CheckConstraint(
+            category.in_(["top", "bottom", "bag", "outerwear", "shoe"]),
+            name="category_check",
+        ),
     )
 
 
@@ -28,5 +32,6 @@ class User(Base):
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     email = Column(String, nullable=False, unique=True)
     password = Column(String, nullable=False)
-    created_at = Column(TIMESTAMP(timezone=True),
-                        nullable=False, server_default=text('now()'))
+    created_at = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
+    )

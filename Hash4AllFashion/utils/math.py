@@ -121,7 +121,7 @@ def convert_to_binary(v, bits=8):
 
 def _build_one_table(weights, bits=8):
     table = []
-    for i in range(2 ** bits):
+    for i in range(2**bits):
         x = convert_to_binary(i, bits)
         # 0 -> 1 , 1 -> -1
         x = 1 - 2 * x
@@ -148,8 +148,8 @@ def test_whd(size=600, bits=8):
     w = np.random.randn(num)
     x = convert_to_int(a, bits)
     y = convert_to_int(b, bits)
-    tables = build_look_table(w, bits).reshape(size * (2 ** bits))
-    offset = np.arange(size) * (2 ** bits)
+    tables = build_look_table(w, bits).reshape(size * (2**bits))
+    offset = np.arange(size) * (2**bits)
     sim1 = np.sum(w * a * b)
     sim2 = tables[np.bitwise_xor(x, y) + offset].sum()
     assert np.abs(sim1 - sim2) < 1e-6

@@ -52,39 +52,63 @@ with open(config_path, "r") as f:
     kwargs = yaml.load(f, Loader=yaml.FullLoader)
 config = FashionDeployParam(**kwargs)
 
-pipeline = prediction.Pipeline(config,
-                            storage_path=pseudo_s3_storage_file)
+pipeline = prediction.Pipeline(config, storage_path=pseudo_s3_storage_file)
 
 
 #### GET ####
 @router.get("/{user_id}/{item_name}", response_model=schemas.Apparel)
 async def get_items(user_id: int, item_name: str, db: Session = Depends(get_db)):
-    item = db.query(models.Apparel).filter(models.Apparel.user_id==user_id, 
-                                models.Apparel.name==f"{item_name}.jpg").first()
+    item = (
+        db.query(models.Apparel)
+        .filter(
+            models.Apparel.user_id == user_id, models.Apparel.name == f"{item_name}.jpg"
+        )
+        .first()
+    )
     if item is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"item with name {item_name} was not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"item with name {item_name} was not found",
+        )
 
     return item
 
 
 #### POST ####
-@router.post("/{user_id}/upload_item", response_model=schemas.Apparel, status_code=status.HTTP_201_CREATED)
-async def create_item(user_id: int, item_input: schemas.ApparelCreateInput, db: Session = Depends(get_db)):
+@router.post(
+    "/{user_id}/upload_item",
+    response_model=schemas.Apparel,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_item(
+    user_id: int, item_input: schemas.ApparelCreateInput, db: Session = Depends(get_db)
+):
     item_name = item_input.name
     input64 = item_input.input64
     price = item_input.price
 
     # Check if the image exist in database according to user_id
-    item = db.query(models.Apparel).filter(models.Apparel.user_id==user_id, 
-                                models.Apparel.name==f"{item_name}.jpg").first()
+    item = (
+        db.query(models.Apparel)
+        .filter(
+            models.Apparel.user_id == user_id, models.Apparel.name == f"{item_name}.jpg"
+        )
+        .first()
+    )
     if item is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=f"apparel {item_name} already exists in database")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"apparel {item_name} already exists in database",
+        )
 
     img_pil = utils.base64_to_image(input64)
-    lci_v, lci_s, bci_v, bci_s, cate_prediction = \
-            pipeline.extract_feats_from_one_sample(img_pil)
+    (
+        lci_v,
+        lci_s,
+        bci_v,
+        bci_s,
+        cate_prediction,
+    ) = pipeline.extract_feats_from_one_sample(img_pil)
     w, h = img_pil.size
 
     storage = load_storage(pseudo_s3_storage_file)
@@ -102,12 +126,14 @@ async def create_item(user_id: int, item_input: schemas.ApparelCreateInput, db: 
     del storage
     pipeline._load_storage()
 
-    new_item = models.Apparel(name=f"{item_name}.jpg",
-                            width=w,
-                            height=h,
-                            category=cate_prediction,
-                            price=price,
-                            user_id=user_id)
+    new_item = models.Apparel(
+        name=f"{item_name}.jpg",
+        width=w,
+        height=h,
+        category=cate_prediction,
+        price=price,
+        user_id=user_id,
+    )
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
@@ -117,25 +143,38 @@ async def create_item(user_id: int, item_input: schemas.ApparelCreateInput, db: 
 
 #### PUT ####
 @router.put("/{user_id}/{item_name}", response_model=schemas.Apparel)
-def update_post(user_id: int, item_name: str, item: schemas.ApparelUpdate, db: Session = Depends(get_db)):
-    item_query = db.query(models.Apparel).filter(models.Apparel.user_id==user_id, models.Apparel.name==f"{item_name}.jpg")
+def update_post(
+    user_id: int,
+    item_name: str,
+    item: schemas.ApparelUpdate,
+    db: Session = Depends(get_db),
+):
+    item_query = db.query(models.Apparel).filter(
+        models.Apparel.user_id == user_id, models.Apparel.name == f"{item_name}.jpg"
+    )
 
     if item_query.first() is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"item with name {item_name} was not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"item with name {item_name} was not found",
+        )
 
     # Check if change item name not in database
-    if item_name != item.name.split('.')[0]:
-        check_item_query = db.query(models.Apparel).filter(models.Apparel.user_id==user_id, models.Apparel.name==item.name)
+    if item_name != item.name.split(".")[0]:
+        check_item_query = db.query(models.Apparel).filter(
+            models.Apparel.user_id == user_id, models.Apparel.name == item.name
+        )
 
         if check_item_query.first() is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=f"item with name {item_name.split('.')[0]} was already exists")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"item with name {item_name.split('.')[0]} was already exists",
+            )
 
     storage = load_storage(pseudo_s3_storage_file)
     assert user_id in storage
     assert f"{item_name}.jpg" in storage[user_id]
-    if item_name != item.name.split('.')[0]:
+    if item_name != item.name.split(".")[0]:
         # Change storage
         storage[user_id][item.name] = storage[user_id][f"{item_name}.jpg"].copy()
         del storage[user_id][f"{item_name}.jpg"]
@@ -143,12 +182,14 @@ def update_post(user_id: int, item_name: str, item: schemas.ApparelUpdate, db: S
     save_storage(pseudo_s3_storage_file, storage)
     del storage
     pipeline._load_storage()
-    
+
     item_query.update(item.dict(), synchronize_session=False)
     db.commit()
 
     # Get new item according to change
-    item_query = db.query(models.Apparel).filter(models.Apparel.user_id==user_id, models.Apparel.name==item.name)
+    item_query = db.query(models.Apparel).filter(
+        models.Apparel.user_id == user_id, models.Apparel.name == item.name
+    )
 
     return item_query.first()
 
@@ -156,12 +197,15 @@ def update_post(user_id: int, item_name: str, item: schemas.ApparelUpdate, db: S
 #### DELETE ####
 @router.delete("/{user_id}/{item_name}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(user_id: int, item_name: str, db: Session = Depends(get_db)):
-    item_query = db.query(models.Apparel).filter(models.Apparel.user_id==user_id,
-                                                models.Apparel.name==f"{item_name}.jpg")
+    item_query = db.query(models.Apparel).filter(
+        models.Apparel.user_id == user_id, models.Apparel.name == f"{item_name}.jpg"
+    )
 
     if item_query.first() is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"item with name {item_name} was not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"item with name {item_name} was not found",
+        )
 
     storage = load_storage(pseudo_s3_storage_file)
     assert user_id in storage
@@ -171,16 +215,19 @@ def delete_post(user_id: int, item_name: str, db: Session = Depends(get_db)):
     save_storage(pseudo_s3_storage_file, storage)
     del storage
     pipeline._load_storage()
-    
+
     item_query.delete(synchronize_session=False)
     db.commit()
-    
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-
 @router.post("/{user_id}/outfits_recommend/")
-def outfits_recommend(user_id: int, outfit_recommend_option: schemas.OutfitsRecommendation, db: Session = Depends(get_db)):
+def outfits_recommend(
+    user_id: int,
+    outfit_recommend_option: schemas.OutfitsRecommendation,
+    db: Session = Depends(get_db),
+):
     chosen = {}
     recommend_choices = []
 
@@ -189,16 +236,25 @@ def outfits_recommend(user_id: int, outfit_recommend_option: schemas.OutfitsReco
             img_name = outfit_recommend_option.dict()[cate]
             if img_name[-4:] != ".jpg":
                 img_name = img_name + ".jpg"
-            item = db.query(models.Apparel).filter(models.Apparel.user_id==user_id,
-                                                models.Apparel.name==img_name).first()
+            item = (
+                db.query(models.Apparel)
+                .filter(
+                    models.Apparel.user_id == user_id, models.Apparel.name == img_name
+                )
+                .first()
+            )
             if item is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"item with name {img_name.split('.')[0]} was not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"item with name {img_name.split('.')[0]} was not found",
+                )
             chosen[cate] = img_name
-        
+
         else:  # int
             if outfit_recommend_option.dict()[cate] == 1:  # Enable
                 recommend_choices.append(cate)
-    
-    outputs = pipeline.outfit_recommend(chosen=chosen, recommend_choices=recommend_choices, db=db, user_id=user_id)
+
+    outputs = pipeline.outfit_recommend(
+        chosen=chosen, recommend_choices=recommend_choices, db=db, user_id=user_id
+    )
     return outputs
