@@ -1,9 +1,13 @@
 import os
+import os.path as osp
 import yaml
 import logging
 import pickle5 as pickle
+from collections import defaultdict
+import numpy as np
 
 from fastapi import status, HTTPException, Depends, APIRouter, Response
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .. import models, utils, prediction
@@ -12,13 +16,18 @@ from ..database import get_db
 from Hash4AllFashion.utils.param import FashionDeployParam
 from Hash4AllFashion.utils.logger import Logger, config_log
 
+from CapstoneProject.apis.search_item_fashion_clip import FashionRetrieval
+from CapstoneProject.tools import load_json
+
 router = APIRouter(prefix="/items", tags=["Apparels"])
 
 
 def get_logger(env, config):
     if env == "local":
         ##TODO: Modify this logger name
-        logfile = config_log(stream_level=config.log_level, log_file=config.log_file)
+        logfile = config_log(
+            stream_level=config.log_level, log_file=config.log_file
+        )
         logger = logging.getLogger("polyvore")
         logger.info("Logging to file %s", logfile)
     elif env == "colab":
@@ -54,14 +63,75 @@ config = FashionDeployParam(**kwargs)
 
 pipeline = prediction.Pipeline(config, storage_path=pseudo_s3_storage_file)
 
+## Get fashion retrieval
+project_dir = "/home/dungmaster/Projects/Machine Learning"
+par_dir = osp.join(
+    project_dir, "HangerAI_outfits_recommendation_system/CapstoneProject"
+)
+image_dir = "/home/dungmaster/Datasets/polyvore_outfits/images"
+
+# TODO: change storage pkl file to more data, preferably full polyvore data
+hashes_file = osp.abspath(
+    osp.join(
+        project_dir,
+        "HangerAI_outfits_recommendation_system",
+        "storages",
+        "hanger_apparels_100.pkl",
+    )
+)
+
+embeddings_file = osp.join(par_dir, "model_embeddings", "polyvore_502.txt")
+
+metadata_file = (
+    "/home/dungmaster/Datasets/polyvore_outfits/polyvore_item_metadata.json"
+)
+
+image_embeddings = None
+
+# outfit_recommend_option = {"top": [], "bottom": [], "bag": [], "outerwear": [], "shoe": []}
+outfit_recommend_option = defaultdict(list)
+cates = ["top", "bottom", "bag", "outerwear", "shoe"]
+
+top_k = 20
+empty_cate_extras = 5
+n_cols = len(cates)
+
+name = lambda x: osp.basename(x).split(".")[0]
+
+
+def load_image_files(hfile):
+    pkl_file = open(hfile, "rb")
+    hashes_polyvore = pickle.load(pkl_file)[1]
+    image_names = list(hashes_polyvore.keys())
+    image_paths = [osp.join(image_dir, name) for name in image_names]
+    return image_paths
+
+
+def load_meta(metadata_file):
+    metadata = load_json(metadata_file)
+
+    return metadata
+
+
+image_paths = load_image_files(hashes_file)
+image_embeddings = np.loadtxt(embeddings_file)
+metadata = load_meta(metadata_file)
+
+ret = FashionRetrieval(
+    image_paths=image_paths, image_embeddings=image_embeddings
+)
+
 
 #### GET ####
 @router.get("/{user_id}/{item_name}", response_model=schemas.Apparel)
-async def get_items(user_id: int, item_name: str, db: Session = Depends(get_db)):
+async def get_items(
+    user_id: int, item_name: str, db: Session = Depends(get_db)
+):
     item = (
         db.query(models.Apparel)
         .filter(
-            models.Apparel.user_id == user_id, models.Apparel.name == f"{item_name}.jpg"
+            models.Apparel.user_id == user_id,
+            models.Apparel.name == f"{item_name}.jpg",
         )
         .first()
     )
@@ -81,7 +151,9 @@ async def get_items(user_id: int, item_name: str, db: Session = Depends(get_db))
     status_code=status.HTTP_201_CREATED,
 )
 async def create_item(
-    user_id: int, item_input: schemas.ApparelCreateInput, db: Session = Depends(get_db)
+    user_id: int,
+    item_input: schemas.ApparelCreateInput,
+    db: Session = Depends(get_db),
 ):
     item_name = item_input.name
     input64 = item_input.input64
@@ -91,7 +163,8 @@ async def create_item(
     item = (
         db.query(models.Apparel)
         .filter(
-            models.Apparel.user_id == user_id, models.Apparel.name == f"{item_name}.jpg"
+            models.Apparel.user_id == user_id,
+            models.Apparel.name == f"{item_name}.jpg",
         )
         .first()
     )
@@ -150,7 +223,8 @@ def update_post(
     db: Session = Depends(get_db),
 ):
     item_query = db.query(models.Apparel).filter(
-        models.Apparel.user_id == user_id, models.Apparel.name == f"{item_name}.jpg"
+        models.Apparel.user_id == user_id,
+        models.Apparel.name == f"{item_name}.jpg",
     )
 
     if item_query.first() is None:
@@ -176,7 +250,9 @@ def update_post(
     assert f"{item_name}.jpg" in storage[user_id]
     if item_name != item.name.split(".")[0]:
         # Change storage
-        storage[user_id][item.name] = storage[user_id][f"{item_name}.jpg"].copy()
+        storage[user_id][item.name] = storage[user_id][
+            f"{item_name}.jpg"
+        ].copy()
         del storage[user_id][f"{item_name}.jpg"]
 
     save_storage(pseudo_s3_storage_file, storage)
@@ -195,10 +271,13 @@ def update_post(
 
 
 #### DELETE ####
-@router.delete("/{user_id}/{item_name}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{user_id}/{item_name}", status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_post(user_id: int, item_name: str, db: Session = Depends(get_db)):
     item_query = db.query(models.Apparel).filter(
-        models.Apparel.user_id == user_id, models.Apparel.name == f"{item_name}.jpg"
+        models.Apparel.user_id == user_id,
+        models.Apparel.name == f"{item_name}.jpg",
     )
 
     if item_query.first() is None:
@@ -239,7 +318,8 @@ def outfits_recommend(
             item = (
                 db.query(models.Apparel)
                 .filter(
-                    models.Apparel.user_id == user_id, models.Apparel.name == img_name
+                    models.Apparel.user_id == user_id,
+                    models.Apparel.name == img_name,
                 )
                 .first()
             )
@@ -255,6 +335,135 @@ def outfits_recommend(
                 recommend_choices.append(cate)
 
     outputs = pipeline.outfit_recommend(
-        chosen=chosen, recommend_choices=recommend_choices, db=db, user_id=user_id
+        chosen=chosen,
+        recommend_choices=recommend_choices,
+        db=db,
+        user_id=user_id,
     )
+    return outputs
+
+
+@router.post("/{user_id}/outfits_recommend_from_chosen/")
+def outfits_recommend_from_chosen(
+    user_id: int,
+    outfit_recommend_option: schemas.OutfitsRecommendation,
+    db: Session = Depends(get_db),
+):
+    chosen = defaultdict(list)
+    chosen_cate = "top"
+    outfit_recommend_option = outfit_recommend_option.dict()
+
+    for cate in ["top", "bottom", "bag", "outerwear", "shoe"]:
+        cate_items = outfit_recommend_option[cate]
+        if isinstance(cate_items, list):
+            for img_name in cate_items:
+                if img_name[-4:] != ".jpg":
+                    img_name = img_name + ".jpg"
+                item = (
+                    db.query(models.Apparel)
+                    .filter(
+                        models.Apparel.user_id == user_id,
+                        models.Apparel.name == img_name,
+                    )
+                    .first()
+                )
+                if item is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"item with name {img_name.split('.')[0]} was not found",
+                    )
+                chosen[cate].append(img_name)
+
+        # if len(cate_items) == 0:
+        #     chosen[cate] = "all"
+
+    list_given_items = chosen[chosen_cate]
+    dict_given_items = [{chosen_cate: item} for item in list_given_items]
+    recommend_choices = {k: v for k, v in chosen.items() if k != chosen_cate}
+
+    outputs = pipeline.outfit_recommend_from_chosen(
+        given_items=dict_given_items,
+        recommend_choices=recommend_choices,
+        db=db,
+        user_id=user_id,
+    )
+    return outputs
+
+
+def get_category(path):
+    image_id = name(path)
+    category = metadata[image_id]["semantic_category"]
+    if category != "outerwear":
+        category = category[:-1]
+    return image_id, category
+
+
+@router.post("/{user_id}/outfits_recommend_from_prompt/")
+def outfits_recommend_from_prompt(
+    user_id: int,
+    prompt: schemas.TextInput,
+    db: Session = Depends(get_db),
+):
+    # Retrieve items matching the prompt
+    processed_text = prompt.text.lower()
+    found_image_paths = ret.retrieve(query=processed_text)
+    prompt_matched_image_paths = found_image_paths[:top_k]
+    for image_path in prompt_matched_image_paths:
+        image_id, category = get_category(image_path)
+        outfit_recommend_option[category].append(image_id)
+
+    # Add items in categories in which there is no item
+    # pprint(outfit_recommend_option)
+    for cate in cates:
+        count = 0
+        if cate not in list(outfit_recommend_option.keys()):
+            for image_path in found_image_paths[top_k:]:
+                image_id, category = get_category(image_path)
+                if category == cate:
+                    outfit_recommend_option[cate].append(image_id)
+                    count += 1
+                if count >= empty_cate_extras:
+                    break
+
+    # Compose outfits from retrieved items
+    chosen = defaultdict(list)
+    chosen_cate = "top"
+
+    for cate in ["top", "bottom", "bag", "outerwear", "shoe"]:
+        cate_items = outfit_recommend_option[cate]
+        if isinstance(cate_items, list):
+            for img_name in cate_items:
+                if img_name[-4:] != ".jpg":
+                    img_name = img_name + ".jpg"
+                item = (
+                    db.query(models.Apparel)
+                    .filter(
+                        models.Apparel.user_id == user_id,
+                        models.Apparel.name == img_name,
+                    )
+                    .first()
+                )
+                if item is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"item with name {img_name.split('.')[0]} was not found",
+                    )
+                chosen[cate].append(img_name)
+
+        # if len(cate_items) == 0:
+        #     chosen[cate] = "all"
+
+    list_given_items = chosen[chosen_cate]
+    dict_given_items = [{chosen_cate: item} for item in list_given_items]
+    recommend_choices = {k: v for k, v in chosen.items() if k != chosen_cate}
+
+    outputs = pipeline.outfit_recommend_from_chosen(
+        given_items=dict_given_items,
+        recommend_choices=recommend_choices,
+        db=db,
+        user_id=user_id,
+    )
+
+    outfit_recommend_option.clear()
+
     return outputs
