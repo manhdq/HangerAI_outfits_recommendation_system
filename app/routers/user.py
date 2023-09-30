@@ -22,7 +22,9 @@ def get_user(id: int, db: Session = Depends(get_db)):
 
 
 #### POST ####
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
+@router.post(
+    "/", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut
+)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     # Hash the password
     hashed_password = utils.hash(user.password)
@@ -37,13 +39,18 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 #### DELETE ####
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_change: schemas.UserDelete, db: Session = Depends(get_db)):
+def delete_user(
+    user_change: schemas.UserDelete, db: Session = Depends(get_db)
+):
     # Check password
-    user_query = db.query(models.User).filter(models.User.email == user_change.email)
+    user_query = db.query(models.User).filter(
+        models.User.email == user_change.email
+    )
 
     if user_query.first() is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Invalid Credentials",
         )
 
     user_query.delete(synchronize_session=False)

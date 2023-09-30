@@ -40,8 +40,24 @@ class OutfitsRecommendation(BaseModel):
     ***.jpg: Input for recommendation
     """
 
-    top: Union[str, int]
-    bottom: Union[str, int]
-    bag: Union[str, int]
-    outerwear: Union[str, int]
-    shoe: Union[str, int]
+    top: Union[str, int, list]
+    bottom: Union[str, int, list]
+    bag: Union[str, int, list]
+    outerwear: Union[str, int, list]
+    shoe: Union[str, int, list]
+
+
+class OutfitsRecommendationFromChosen(BaseModel):
+    """
+    list[*.jpg]: list of images
+    """
+
+    top: list
+    bottom: list
+    bag: list
+    outerwear: list
+    shoe: list
+
+
+class TextInput(BaseModel):
+    text: str
