@@ -62,8 +62,12 @@ class BasicSolver(object):
         # Set learning rate policy
         enum_lr_policy = utils.get_named_class(torch.optim.lr_scheduler)
         lr_policy = enum_lr_policy[optim_param.lr_scheduler]
-        self.ReduceLROnPlateau = optim_param.lr_scheduler == "ReduceLROnPlateau"
-        self.lr_scheduler = lr_policy(self.optimizer, **optim_param.scheduler_param)
+        self.ReduceLROnPlateau = (
+            optim_param.lr_scheduler == "ReduceLROnPlateau"
+        )
+        self.lr_scheduler = lr_policy(
+            self.optimizer, **optim_param.scheduler_param
+        )
 
     def init_tracking_writer(self, tracking_method):
         """Init tracking method."""
@@ -169,7 +173,9 @@ class BasicSolver(object):
         # Generate negative outfit before each epoch
         loader = self.loader[phase].make_nega()
         self.logger.info("\n".join(["\n", "=" * 10, "TRAINING", "=" * 10]))
-        msg = "Train - Epoch[{}](%d): [%d]/[{}]:".format(epoch, loader.num_batch)
+        msg = "Train - Epoch[{}](%d): [%d]/[{}]:".format(
+            epoch, loader.num_batch
+        )
         lastest_time = time()
         ##TODO: Replace this with wandb, comet or tensorBoard
         tracer = utils.tracer.Tracer(win_size=0, logger=self.logger)

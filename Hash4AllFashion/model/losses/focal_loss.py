@@ -12,9 +12,13 @@ def focal_loss(input, target, gamma=3.5, alpha=0.3, size_average=True):
         alpha = torch.Tensor(alpha)
 
     if input.dim() > 2:
-        input = input.view(input.size(0), input.size(1), -1)  # N,C,H,W => N,C,H*W
+        input = input.view(
+            input.size(0), input.size(1), -1
+        )  # N,C,H,W => N,C,H*W
         input = input.transpose(1, 2)  # N,C,H*W => N,H*W,C
-        input = input.contiguous().view(-1, input.size(2))  # N,H*W,C => N*H*W,C
+        input = input.contiguous().view(
+            -1, input.size(2)
+        )  # N,H*W,C => N*H*W,C
     target = target.view(-1, 1)
 
     logpt = F.log_softmax(input)

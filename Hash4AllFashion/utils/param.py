@@ -167,16 +167,20 @@ class DataParam(_Param):
             "jewellery",
         ]
         self.id2cat = {
-            cat_id: cat_name for cat_id, cat_name in zip(self.cate_map, self.cate_name)
+            cat_id: cat_name
+            for cat_id, cat_name in zip(self.cate_map, self.cate_name)
         }
         self.cat2id = {
-            cat_name: cat_id for cat_id, cat_name in zip(self.cate_map, self.cate_name)
+            cat_name: cat_id
+            for cat_id, cat_name in zip(self.cate_map, self.cate_name)
         }
 
         if self.shuffle is None:
             self.shuffle = self.shuffle or (self.phase == "train")
         if not (self.use_semantic or self.use_visual):
-            warnings.warn("Neither semantic nor visual is selected! ", RuntimeWarning)
+            warnings.warn(
+                "Neither semantic nor visual is selected! ", RuntimeWarning
+            )
 
     @property
     def image_dir(self):
@@ -203,7 +207,8 @@ class DataParam(_Param):
         ##TODO: Delete this
         return None
         return [
-            os.path.join(self.data_dir, self.list_fmt.format(p)) for p in cfg.CateName
+            os.path.join(self.data_dir, self.list_fmt.format(p))
+            for p in cfg.CateName
         ]
 
     @property
@@ -278,10 +283,12 @@ class NetParam(_Param):
             "jewellery",
         ]
         self.id2cat = {
-            cat_id: cat_name for cat_id, cat_name in zip(self.cate_map, self.cate_name)
+            cat_id: cat_name
+            for cat_id, cat_name in zip(self.cate_map, self.cate_name)
         }
         self.cat2id = {
-            cat_name: cat_id for cat_id, cat_name in zip(self.cate_map, self.cate_name)
+            cat_name: cat_id
+            for cat_id, cat_name in zip(self.cate_map, self.cate_name)
         }
 
 
@@ -338,7 +345,9 @@ class OptimParam(_Param):
     def _optim_Adam(self, param=None):
         if param is None:
             param = dict()
-        return dict(betas=param.get("betas", (0.9, 0.999)), eps=param.get("eps", 1e-8))
+        return dict(
+            betas=param.get("betas", (0.9, 0.999)), eps=param.get("eps", 1e-8)
+        )
 
     def _policy_StepLR(self, param=None):
         if param is None:
@@ -417,7 +426,9 @@ class FashionTrainParam(_Param):
 
     def setup(self):
         # If set specific configuration for training
-        if not (self.train_data_param is None and self.test_data_param is None):
+        if not (
+            self.train_data_param is None and self.test_data_param is None
+        ):
             param = self.data_param or dict()
             train_param = self.train_data_param or dict()
             test_param = self.test_data_param or dict()
@@ -466,7 +477,9 @@ class FashionExtractParam(_Param):
 
     def setup(self):
         # If set specific configuration for training
-        if not (self.train_data_param is None and self.test_data_param is None):
+        if not (
+            self.train_data_param is None and self.test_data_param is None
+        ):
             param = self.data_param or dict()
             train_param = self.train_data_param or dict()
             test_param = self.test_data_param or dict()
@@ -503,7 +516,9 @@ class FashionDeployParam(_Param):
 
     def setup(self):
         # If set specific configuration for training
-        if not (self.train_data_param is None and self.test_data_param is None):
+        if not (
+            self.train_data_param is None and self.test_data_param is None
+        ):
             param = self.data_param or dict()
             train_param = self.train_data_param or dict()
             test_param = self.test_data_param or dict()

@@ -61,7 +61,9 @@ class RankMetric(threading.Thread):
         binary_auc = utils.metrics.calc_AUC(self._scores[2], self._scores[3])
         ndcg = utils.metrics.calc_NDCG(self._scores[0], self._scores[1])
         binary_ndcg = utils.metrics.calc_NDCG(self._scores[2], self._scores[3])
-        return dict(auc=auc, binary_auc=binary_auc, ndcg=ndcg, binary_ndcg=binary_ndcg)
+        return dict(
+            auc=auc, binary_auc=binary_auc, ndcg=ndcg, binary_ndcg=binary_ndcg
+        )
 
 
 class FashionNet(nn.Module):
@@ -109,7 +111,9 @@ class FashionNet(nn.Module):
         self.cate_idxs = [cfg.CateIdx[col] for col in cate_selection]
         self.cate_idxs_to_tensor_idxs = {
             cate_idx: tensor_idx
-            for cate_idx, tensor_idx in zip(self.cate_idxs, range(len(self.cate_idxs)))
+            for cate_idx, tensor_idx in zip(
+                self.cate_idxs, range(len(self.cate_idxs))
+            )
         }
         self.tensor_idxs_to_cate_idxs = {
             v: k for k, v in self.cate_idxs_to_tensor_idxs.items()
@@ -126,7 +130,9 @@ class FashionNet(nn.Module):
             self.core = M.LearnableScale(1)
         elif self.param.hash_types == utils.param.WEIGHTED_HASH_BOTH:
             # two weighted hashing for both user-item and item-item
-            self.core = nn.ModuleList([M.CoreMat(param.dim), M.CoreMat(param.dim)])
+            self.core = nn.ModuleList(
+                [M.CoreMat(param.dim), M.CoreMat(param.dim)]
+            )
         else:
             # Single weighed hashing for user-item or item-item, current only use for item
             ##TODO: Code this for very later
@@ -138,7 +144,9 @@ class FashionNet(nn.Module):
             )
         else:
             ##TODO: Tune wweight for classification loss
-            self.loss_weight = dict(rank_loss=1.0, binary_loss=None, cate_loss=0.8)
+            self.loss_weight = dict(
+                rank_loss=1.0, binary_loss=None, cate_loss=0.8
+            )
         self.configure_trace()
         ##TODO: Modify this and understanding later
         ##TODO: Assume num_users is 1
@@ -243,7 +251,14 @@ class FashionNet(nn.Module):
 
     ##TODO: Modify for not `shared weight` option, add user for very later
     def _pairwise_output(
-        self, posi_mask, posi_idxs, pos_feat, nega_mask, nega_idxs, neg_feat, encoder
+        self,
+        posi_mask,
+        posi_idxs,
+        pos_feat,
+        nega_mask,
+        nega_idxs,
+        neg_feat,
+        encoder,
     ):
         lcpi = self.latent_code(pos_feat, posi_idxs, encoder)
         lcni = self.latent_code(neg_feat, nega_idxs, encoder)
@@ -259,7 +274,14 @@ class FashionNet(nn.Module):
         return (pscore, nscore, bpscore, bnscore), (lcpi, lcni)
 
     def visual_output(self, *inputs):
-        posi_mask, posi_idxs, posi_imgs, nega_mask, nega_idxs, nega_imgs = inputs
+        (
+            posi_mask,
+            posi_idxs,
+            posi_imgs,
+            nega_mask,
+            nega_idxs,
+            nega_imgs,
+        ) = inputs
 
         # Extract visual features
         pos_feat = self.features(posi_imgs)
@@ -282,7 +304,14 @@ class FashionNet(nn.Module):
         """Forward according to setting."""
         # Pair-wise output
         ##TODO: Continue with this func code
-        posi_mask, posi_idxs, posi_imgs, nega_mask, nega_idxs, nega_imgs = inputs
+        (
+            posi_mask,
+            posi_idxs,
+            posi_imgs,
+            nega_mask,
+            nega_idxs,
+            nega_imgs,
+        ) = inputs
         idxs = torch.cat([posi_idxs, nega_idxs])
 
         loss = dict()
@@ -314,8 +343,12 @@ class FashionNet(nn.Module):
         binary_acc = torch.gt(binary_diff, 0)
         cate_acc = self.calc_cate_acc(visual_fc.detach(), idxs)
 
-        loss.update(rank_loss=rank_loss, binary_loss=binary_loss, cate_loss=cls_loss)
-        accuracy.update(accuracy=acc, binary_accuracy=binary_acc, cate_acc=cate_acc)
+        loss.update(
+            rank_loss=rank_loss, binary_loss=binary_loss, cate_loss=cls_loss
+        )
+        accuracy.update(
+            accuracy=acc, binary_accuracy=binary_acc, cate_acc=cate_acc
+        )
         return loss, accuracy
 
     def calc_cate_acc(self, visual_fc, idxs):

@@ -133,7 +133,9 @@ def build_look_table(weights, bits=8):
     size = len(weights) // bits
     tables = []
     for n in range(size):
-        tables.append(_build_one_table(weights[n * bits : (n + 1) * bits], bits))
+        tables.append(
+            _build_one_table(weights[n * bits : (n + 1) * bits], bits)
+        )
     return np.array(tables)
 
 

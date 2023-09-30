@@ -118,7 +118,9 @@ class ImgClassifier(nn.Module):
             if "weight" in name and param.requires_grad:
                 nn.init.normal_(param.data, std=0.01)
             elif "bias" in name and param.requires_grad:
-                nn.init.constant_(param.data, 0)  ##TODO: Do we need zero for last bias?
+                nn.init.constant_(
+                    param.data, 0
+                )  ##TODO: Do we need zero for last bias?
 
 
 class CoreMat(nn.Module):

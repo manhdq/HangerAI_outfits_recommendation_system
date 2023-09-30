@@ -32,7 +32,12 @@ def count_pairwise(count_array: np.ndarray, num_pairwise: int):
 
 def open_lmdb(path):
     return lmdb.open(
-        path, max_readers=1, readonly=True, lock=False, readahead=False, meminit=False
+        path,
+        max_readers=1,
+        readonly=True,
+        lock=False,
+        readahead=False,
+        meminit=False,
     )
 
 
@@ -121,7 +126,9 @@ class Datum(object):
 
 ##TODO: Merge with FashionDataset
 class FashionExtractionDataset(Dataset):
-    def __init__(self, param, transforms=None, cate_selection="all", logger=None):
+    def __init__(
+        self, param, transforms=None, cate_selection="all", logger=None
+    ):
         self.param = param
         self.logger = logger
 
@@ -139,13 +146,17 @@ class FashionExtractionDataset(Dataset):
         self.cate_idxs = [cfg.CateIdx[col] for col in cate_selection[:-1]]
         self.cate_idxs_to_tensor_idxs = {
             cate_idx: tensor_idx
-            for cate_idx, tensor_idx in zip(self.cate_idxs, range(len(self.cate_idxs)))
+            for cate_idx, tensor_idx in zip(
+                self.cate_idxs, range(len(self.cate_idxs))
+            )
         }
         self.tensor_idxs_to_cate_idxs = {
             v: k for k, v in self.cate_idxs_to_tensor_idxs.items()
         }
 
-        self.df = self.get_new_data_with_new_cate_selection(self.df, cate_selection)
+        self.df = self.get_new_data_with_new_cate_selection(
+            self.df, cate_selection
+        )
 
         self.df = self.df.drop("compatible", axis=1)
 
@@ -175,7 +186,9 @@ class FashionExtractionDataset(Dataset):
     def get_tuple(self, idx):
         raw_tuple = self.df.iloc[idx]
         outfit_tuple = raw_tuple[raw_tuple != -1]
-        outfit_idxs = [cfg.CateIdx[col] for col in outfit_tuple.index.to_list()]
+        outfit_idxs = [
+            cfg.CateIdx[col] for col in outfit_tuple.index.to_list()
+        ]
         return outfit_idxs, outfit_tuple.values.tolist()
 
     def __getitem__(self, index):
@@ -189,7 +202,9 @@ class FashionExtractionDataset(Dataset):
 
 
 class FashionDataset(Dataset):
-    def __init__(self, param, transforms=None, cate_selection="all", logger=None):
+    def __init__(
+        self, param, transforms=None, cate_selection="all", logger=None
+    ):
         self.param = param
         self.logger = logger
 
@@ -198,7 +213,9 @@ class FashionDataset(Dataset):
         self.logger.info("Dataframe processing...")
         # Before processing
         num_row_before = len(self.df)
-        pairwise_count_before_list = self.get_pair_list(num_pairwise_list, self.df)
+        pairwise_count_before_list = self.get_pair_list(
+            num_pairwise_list, self.df
+        )
         self.logger.info(
             f"+ Before: Num row: {utils.colour(num_row_before)} - "
             + " - ".join(
@@ -224,15 +241,21 @@ class FashionDataset(Dataset):
         self.cate_idxs = [cfg.CateIdx[col] for col in cate_selection[:-1]]
         self.cate_idxs_to_tensor_idxs = {
             cate_idx: tensor_idx
-            for cate_idx, tensor_idx in zip(self.cate_idxs, range(len(self.cate_idxs)))
+            for cate_idx, tensor_idx in zip(
+                self.cate_idxs, range(len(self.cate_idxs))
+            )
         }
         self.tensor_idxs_to_cate_idxs = {
             v: k for k, v in self.cate_idxs_to_tensor_idxs.items()
         }
 
-        self.df = self.get_new_data_with_new_cate_selection(self.df, cate_selection)
+        self.df = self.get_new_data_with_new_cate_selection(
+            self.df, cate_selection
+        )
         num_row_after = len(self.df)
-        pairwise_count_after_list = self.get_pair_list(num_pairwise_list, self.df)
+        pairwise_count_after_list = self.get_pair_list(
+            num_pairwise_list, self.df
+        )
         self.logger.info(
             f"+ After: Num row: {utils.colour(num_row_after)} - "
             + " - ".join(
@@ -282,7 +305,9 @@ class FashionDataset(Dataset):
         # probability for hard negative samples
         self.hard_ratio = 0.8
         # the ratio between negative outfits and positive outfits
-        self.ratio = self.ratio_fix = len(self.nega_df_ori) / len(self.posi_df_ori)
+        self.ratio = self.ratio_fix = len(self.nega_df_ori) / len(
+            self.posi_df_ori
+        )
         self.set_data_mode(param.data_mode)
         self.set_nega_mode(param.nega_mode)
 
@@ -313,7 +338,9 @@ class FashionDataset(Dataset):
 
     def make_nega(self, ratio=1):
         """Make negative outfits according to its mode and ratio."""
-        self.logger.info("Make negative outfit for mode %s" % self.param.nega_mode)
+        self.logger.info(
+            "Make negative outfit for mode %s" % self.param.nega_mode
+        )
         if self.param.nega_mode == "ShuffleDatabase":
             self.nega_df = self._shuffle_nega()
             self.logger.info("Shuffle negative database")
@@ -387,13 +414,17 @@ class FashionDataset(Dataset):
     def get_tuple(self, df, idx):
         raw_tuple = df.iloc[idx]
         outfit_tuple = raw_tuple[raw_tuple != -1]
-        outfit_idxs = [cfg.CateIdx[col] for col in outfit_tuple.index.to_list()]
+        outfit_idxs = [
+            cfg.CateIdx[col] for col in outfit_tuple.index.to_list()
+        ]
         return outfit_idxs, outfit_tuple.values.tolist()
 
     def _PairWise(self, index):
         """Get a pair of outfits."""
         ##TODO: Modify index for tuple selection for posi and nega (maybe shuffle the df each epoch)
-        posi_idxs, posi_tpl = self.get_tuple(self.posi_df, int(index // self.ratio))
+        posi_idxs, posi_tpl = self.get_tuple(
+            self.posi_df, int(index // self.ratio)
+        )
         nega_idxs, nega_tpl = self.get_tuple(self.nega_df, index)
 
         posi_idxs = list(
@@ -416,7 +447,9 @@ class FashionDataset(Dataset):
 
     def __len__(self):
         """Return the size of dataset."""
-        return dict(PairWise=int(self.ratio * self.num_posi))[self.param.data_mode]
+        return dict(PairWise=int(self.ratio * self.num_posi))[
+            self.param.data_mode
+        ]
 
     @property
     def num_posi(self):
@@ -449,7 +482,9 @@ class FashionLoader(object):
         )
         self.logger.info(
             f"- Not selected apparel: "
-            + ", ".join([utils.colour(cate, "Red") for cate in self.cate_not_selection])
+            + ", ".join(
+                [utils.colour(cate, "Red") for cate in self.cate_not_selection]
+            )
         )
         self.logger.info(
             f"- Data loader configuration: batch size ({utils.colour(param.batch_size)}), number of workers ({utils.colour(param.num_workers)})"
@@ -526,7 +561,14 @@ def outfit_fashion_collate(batch):
         ##TODO: Describe later
     --------
     """
-    posi_mask, posi_idxs_out, posi_imgs_out, nega_mask, nega_idxs_out, nega_imgs_out = (
+    (
+        posi_mask,
+        posi_idxs_out,
+        posi_imgs_out,
+        nega_mask,
+        nega_idxs_out,
+        nega_imgs_out,
+    ) = (
         [],
         [],
         [],
