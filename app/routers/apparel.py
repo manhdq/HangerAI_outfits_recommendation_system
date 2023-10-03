@@ -1,3 +1,4 @@
+import sys
 import os
 import os.path as osp
 import yaml
@@ -5,6 +6,7 @@ import logging
 import pickle5 as pickle
 from collections import defaultdict
 import numpy as np
+from pprint import pprint
 
 from fastapi import status, HTTPException, Depends, APIRouter, Response
 from pydantic import BaseModel
@@ -16,8 +18,10 @@ from ..database import get_db
 from Hash4AllFashion.utils.param import FashionDeployParam
 from Hash4AllFashion.utils.logger import Logger, config_log
 
-from CapstoneProject.apis.search_item_fashion_clip import FashionRetrieval
-from CapstoneProject.tools import load_json
+sys.path += ["CapstoneProject"]
+
+from apis.search_item_fashion_clip import FashionRetrieval
+from tools import load_json
 
 router = APIRouter(prefix="/items", tags=["Apparels"])
 
@@ -63,7 +67,7 @@ config = FashionDeployParam(**kwargs)
 
 pipeline = prediction.Pipeline(config, storage_path=pseudo_s3_storage_file)
 
-## Get fashion retrieval
+## Get data, embedding for fashion retrieval
 project_dir = "/home/dungmaster/Projects/Machine Learning"
 par_dir = osp.join(
     project_dir, "HangerAI_outfits_recommendation_system/CapstoneProject"
@@ -87,15 +91,6 @@ metadata_file = (
 )
 
 image_embeddings = None
-
-# outfit_recommend_option = {"top": [], "bottom": [], "bag": [], "outerwear": [], "shoe": []}
-outfit_recommend_option = defaultdict(list)
-cates = ["top", "bottom", "bag", "outerwear", "shoe"]
-
-top_k = 20
-empty_cate_extras = 5
-n_cols = len(cates)
-
 name = lambda x: osp.basename(x).split(".")[0]
 
 
@@ -120,6 +115,17 @@ metadata = load_meta(metadata_file)
 ret = FashionRetrieval(
     image_paths=image_paths, image_embeddings=image_embeddings
 )
+
+# Hyperparams for outfit recommend 
+# outfit_recommend_option = {"top": [], "bottom": [], "bag": [], "outerwear": [], "shoe": []}
+outfit_recommend_option = defaultdict(list)
+cates = ["top", "bottom", "bag", "outerwear", "shoe"]
+
+top_k = 20
+n_outfits = 4
+# chosen_cate = "top"
+chosen_cate = "dynamic"
+empty_cate_extras = 5
 
 
 #### GET ####
@@ -427,7 +433,6 @@ def outfits_recommend_from_prompt(
 
     # Compose outfits from retrieved items
     chosen = defaultdict(list)
-    chosen_cate = "top"
 
     for cate in ["top", "bottom", "bag", "outerwear", "shoe"]:
         cate_items = outfit_recommend_option[cate]
@@ -444,25 +449,46 @@ def outfits_recommend_from_prompt(
                     .first()
                 )
                 if item is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"item with name {img_name.split('.')[0]} was not found",
-                    )
-                chosen[cate].append(img_name)
+                    # raise HTTPException(
+                    #     status_code=status.HTTP_404_NOT_FOUND,
+                    #     detail=f"item with name {img_name.split('.')[0]} was not found",
+                    # )
+                    print(f"item with name {img_name.split('.')[0]} was not found!")
+                    continue
+                else:
+                    chosen[cate].append(img_name)
 
-        # if len(cate_items) == 0:
-        #     chosen[cate] = "all"
+    # Recommend outfit not from just top query exclusively
+    # but from top items retrieved of previous model
+    outputs = {"outfit_recommend": []}
+    if chosen_cate == "dynamic":
+        for image_path in found_image_paths[:n_outfits]:
+            image_id, category = get_category(image_path)
+            print(category)
+            list_given_items = chosen[category]
+            dict_given_items = [{category: item} for item in list_given_items]
+            recommend_choices = {k: v for k, v in chosen.items() if k != category}
+            output = pipeline.outfit_recommend_from_chosen(
+                given_items=dict_given_items,
+                recommend_choices=recommend_choices,
+                db=db,
+                user_id=user_id,
+            )["outfit_recommend"][0]
 
-    list_given_items = chosen[chosen_cate]
-    dict_given_items = [{chosen_cate: item} for item in list_given_items]
-    recommend_choices = {k: v for k, v in chosen.items() if k != chosen_cate}
+            # Remove duplicate outfits
+            if output not in outputs["outfit_recommend"]:
+                outputs["outfit_recommend"].append(output)
+    else:
+        list_given_items = chosen[chosen_cate]
+        dict_given_items = [{chosen_cate: item} for item in list_given_items]
+        recommend_choices = {k: v for k, v in chosen.items() if k != chosen_cate}
 
-    outputs = pipeline.outfit_recommend_from_chosen(
-        given_items=dict_given_items,
-        recommend_choices=recommend_choices,
-        db=db,
-        user_id=user_id,
-    )
+        outputs = pipeline.outfit_recommend_from_chosen(
+            given_items=dict_given_items,
+            recommend_choices=recommend_choices,
+            db=db,
+            user_id=user_id,
+        )
 
     outfit_recommend_option.clear()
 
