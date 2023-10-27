@@ -85,7 +85,7 @@ class FashionNet(nn.Module):
                 self.encoder_v = M.ImgEncoder(feat_dim, param)
             if self.param.use_semantic:
                 ##TODO: Modify this later
-                feat_dim = 2400
+                feat_dim = self.features.dim
                 self.encoder_t = M.TxtEncoder(feat_dim, param)
         else:
             ##TODO: Code forward this later
@@ -99,7 +99,7 @@ class FashionNet(nn.Module):
                 )
             if self.param.use_semantic:
                 ##TODO: Modify this later
-                feat_dim = 2400
+                feat_dim = self.features.dim
                 self.encoder_t = nn.ModuleDict(
                     {
                         cate_name: M.TxtEncoder(feat_dim, param)
@@ -122,7 +122,7 @@ class FashionNet(nn.Module):
         if self.param.use_visual:
             self.classifier_v = M.ImgClassifier(feat_dim, len(self.cate_idxs))
         if self.param.use_semantic:
-            raise
+            self.classifier_t = M.TxtClassifier(feat_dim, len(self.cate_idxs))
 
         # Matching block
         if self.param.hash_types == utils.param.NO_WEIGHTED_HASH:
@@ -362,10 +362,10 @@ class FashionNet(nn.Module):
 
         lcis_v = self.encoder_v(feats)
         ##TODO: Extract semantic if enable
-        lcis_s = None
+        lcis_s = self.encoder_v(feats)
 
         bcis_v = self.sign(lcis_v)
-        bcis_s = None
+        bcis_s = self.sign(lcis_s)
 
         return lcis_v, lcis_s, bcis_v, bcis_s, visual_fc
 
