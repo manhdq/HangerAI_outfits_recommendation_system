@@ -1,5 +1,10 @@
+import math
+from icecream import ic
+import snoop
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from ..utils import config as cfg
 
@@ -47,6 +52,43 @@ class LatentCode(nn.Module):
         return torch.tanh(x).view(-1, self.param.dim)
 
 
+class CrossAttention(nn.Module):
+    def __init__(
+            self, n_heads, d_embed, d_cross, in_proj_bias=True, out_proj_bias=True
+    ):
+        super().__init__()
+        self.q_proj = nn.Linear(d_embed, d_embed, bias=in_proj_bias)
+        self.k_proj = nn.Linear(d_cross, d_embed, bias=in_proj_bias)
+        self.v_proj = nn.Linear(d_cross, d_embed, bias=in_proj_bias)
+        self.out_proj = nn.Linear(d_embed, d_embed, bias=out_proj_bias)
+        self.n_heads = n_heads
+        self.d_head = d_embed // n_heads
+
+    @snoop
+    def forward(self, x, y):
+        input_shape = x.shape
+        batch_size, sequence_length, d_embed = input_shape
+        interim_shape = (batch_size, -1, self.n_heads, self.d_head)
+
+        q = self.q_proj(x)
+        k = self.k_proj(y)
+        v = self.v_proj(y)
+
+        q = q.view(interim_shape).transpose(1, 2)
+        k = k.view(interim_shape).transpose(1, 2)
+        v = v.view(interim_shape).transpose(1, 2)
+
+        weight = q @ k.transpose(-1, -2)
+        weight /= math.sqrt(self.d_head)
+        weight = F.softmax(weight, dim=-1)
+
+        output = weight @ v
+        output = output.transpose(1, 2).contiguous()
+        output = output.view(input_shape)
+        output = self.out_proj(output)
+        return output
+
+
 class ImgEncoder(LatentCode):
     """Module for encode to learn the latent code."""
 
@@ -79,7 +121,71 @@ class ImgEncoder(LatentCode):
         nn.init.normal_(self.encoder[-1].weight.data, std=0.01)
 
 
+class TxtEncoder(LatentCode):
+    def __init__(self, in_feature, param):
+        super().__init__(param)
+        self.encoder = nn.Sequential(
+            nn.Linear(in_feature, 1024),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(1024, param.dim, bias=False),
+        )
+
+    def feat(self, x):
+        return self.encoder(x)
+
+    def init_weights(self):
+        """Initialize weights for encoder with pre-trained model."""
+        nn.init.normal_(self.encoder[0].weight.data, std=0.01)
+        nn.init.constant_(self.encoder[0].bias.data, 0)
+        nn.init.normal_(self.encoder[-1].weight.data, std=0.01)
+
+
 class ImgClassifier(nn.Module):
+    """Module for classification for visual features (image)"""
+
+    def __init__(self, in_feature, num_classes):
+        """Initialize an visual classification
+
+        Parameter:
+        ----------
+        in_feature: feature_dimention for image features
+        num_classes: Number of classes for classification
+
+        """
+        super().__init__()
+        ##TODO: Change output_dim if in_feature is low
+        self.fc = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(in_feature, in_feature // 2),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(in_feature // 2, in_feature // 4),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(in_feature // 4, in_feature // 8),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(in_feature // 8, num_classes),
+        )
+
+    def forward(self, x):
+        return self.fc(x)
+
+    def init_weights(
+        self,
+    ):
+        """Initialize weights for visual classifier with pre-trained model."""
+        for name, param in self.named_parameters():
+            if "weight" in name and param.requires_grad:
+                nn.init.normal_(param.data, std=0.01)
+            elif "bias" in name and param.requires_grad:
+                nn.init.constant_(
+                    param.data, 0
+                )  ##TODO: Do we need zero for last bias?
+
+
+class TxtClassifier(nn.Module):
     """Module for classification for visual features (image)"""
 
     def __init__(self, in_feature, num_classes):
