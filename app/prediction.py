@@ -4,15 +4,17 @@ import copy
 import numpy as np
 import pickle5 as pickle
 from collections import defaultdict
+from icecream import ic
 import snoop
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 from . import models
 from Hash4AllFashion import utils
 from Hash4AllFashion.utils import config as cfg
-from Hash4AllFashion.model import FashionNet
+from Hash4AllFashion.model import FashionNet, CrossAttention
 from Hash4AllFashion.dataset.transforms import get_img_trans
 
 ##TODO: Change this
@@ -65,6 +67,17 @@ class Pipeline:
                 "semantic": "bci_s",
             },
         }[config.score_type_selection][config.feature_type_selection]
+        # self.attn = CrossAttention(
+        #     n_heads=4,
+        #     d_embed=512,
+        #     d_cross=128
+        # ).cuda(device=self.device)
+        self.t_proj = nn.Linear(512, 128).cuda(device=self.device)
+        self.attn = nn.MultiheadAttention(
+            embed_dim=128,
+            num_heads=4,
+            batch_first=True
+        ).cuda(device=self.device)
 
         self.num_recommends_per_choice = config.num_recommends_per_choice
         self.num_recommends_for_composition = (
@@ -179,7 +192,7 @@ class Pipeline:
         inputs = self.add_inputs(self, inputs, recommend_choices)
         return inputs
 
-    def compute_score(self, net, input, user_id, scale=10.0):
+    def compute_score(self, net, input, user_id, scale=10.0, text_embedding=None):
         # print(self.storage.keys())
         # ilatents = [
         #     self.storage[user_id][v][self.type_selection]
@@ -189,8 +202,18 @@ class Pipeline:
             self.storage[user_id][v][self.type_selection]
             for _, v in input.items()
         ]
+
         ilatents = np.stack(ilatents)
         ilatents = torch.from_numpy(ilatents).cuda(device=self.device)
+
+        if text_embedding is not None:
+            text_embedding = text_embedding.unsqueeze(1)
+            text_embedding = text_embedding.repeat(1, ilatents.size(0), 1)
+            ilatents = self.attn(
+                ilatents.unsqueeze(0),
+                text_embedding,
+                text_embedding
+            )[0]
 
         size = len(ilatents)
         indx, indy = np.triu_indices(size, k=1)
@@ -256,7 +279,12 @@ class Pipeline:
         return outputs
 
     def outfit_recommend_from_chosen(
-        self, given_items: list[dict], recommend_choices: list, db, user_id
+        self,
+        given_items: list[dict],
+        recommend_choices: list,
+        db,
+        user_id,
+        text_embedding = None    
     ):
         """Recommend outfit from database
 
@@ -285,6 +313,10 @@ class Pipeline:
         #         ]
         #         outputs[cate] = cate_recommended
 
+        if text_embedding is not None:
+            text_embedding = torch.from_numpy(text_embedding).cuda(device=self.device)
+            text_embedding = self.t_proj(text_embedding)
+        
         if (
             self.get_composed_recommendation
         ):  # Recommend outfit from recommended above
@@ -293,7 +325,12 @@ class Pipeline:
                 inputs = self.get_inputs(item, recommend_choices, db, user_id)
 
                 for i, input in enumerate(inputs):
-                    score = self.compute_score(self.net, input, user_id)
+                    score = self.compute_score(
+                        self.net,
+                        input,
+                        user_id,
+                        text_embedding=text_embedding
+                    )
                     scores.append(score)
                 target_arg = sorted(
                     range(len(scores)), key=lambda k: -scores[k]
