@@ -1,3 +1,4 @@
+
 import sys
 import os
 import os.path as osp
@@ -72,8 +73,8 @@ project_dir = "/home/dungmaster/Projects/Machine Learning"
 par_dir = osp.join(
     project_dir, "HangerAI_outfits_recommendation_system/CapstoneProject"
 )
-# image_dir = "/home/dungmaster/Datasets/polyvore_outfits/images"
-image_dir = "./app/static"
+image_dir = "/home/dungmaster/Datasets/polyvore_outfits/images"
+# image_dir = "./app/static"
 
 # TODO: change storage pkl file to more data, preferably full polyvore data
 hashes_file = osp.abspath(
@@ -471,7 +472,10 @@ def outfits_recommend_from_prompt(
 
     # Recommend outfit not from just top query exclusively
     # but from top items retrieved of previous model
-    outputs = {"outfit_recommend": []}
+    outputs = {
+        "first_item_cate": [],
+        "outfit_recommend": []
+    }
     if chosen_cate == "dynamic":
         for ind, image_path in enumerate(found_image_paths[:n_outfits]):
             image_id, category = get_category(image_path)
@@ -491,11 +495,11 @@ def outfits_recommend_from_prompt(
 
             # Preprocess the output
             output = {cate: osp.join(image_dir, name) for cate, name in output.items()}
-            output["Outfit Number"] = ind
-            output["first_item_cate"] = category
+            # output["Outfit Number"] = ind
             
             # Remove duplicate outfits
             if output not in outputs["outfit_recommend"]:
+                outputs["first_item_cate"].append(category)
                 outputs["outfit_recommend"].append(output)
     else:
         list_given_items = chosen[chosen_cate]
