@@ -1,4 +1,3 @@
-
 import sys
 import os
 import os.path as osp
@@ -21,7 +20,7 @@ from Hash4AllFashion.utils.logger import Logger, config_log
 
 sys.path += ["CapstoneProject"]
 
-from apis.search_item_fashion_clip import FashionRetrieval
+from apis.search_fclip import FashionRetrieval
 from tools import load_json
 
 router = APIRouter(prefix="/items", tags=["Apparels"])
@@ -73,7 +72,7 @@ project_dir = "/home/dungmaster/Projects/Machine Learning"
 par_dir = osp.join(
     project_dir, "HangerAI_outfits_recommendation_system/CapstoneProject"
 )
-image_dir = "/home/dungmaster/Datasets/polyvore_outfits/images"
+image_dir = "/home/dungmaster/Datasets/polyvore_outfits/sample_images"
 # image_dir = "./app/static"
 
 # TODO: change storage pkl file to more data, preferably full polyvore data
@@ -119,7 +118,7 @@ if osp.exists(embeddings_file):
     save_embeddings = False
 
 ret = FashionRetrieval(
-    image_paths=image_paths, image_embeddings=image_embeddings
+    image_embeddings=image_embeddings
 )
 
 # Hyperparams for outfit recommend
@@ -420,6 +419,7 @@ def outfits_recommend_from_prompt(
     processed_text = prompt.text.lower()
     found_image_paths, text_embedding = ret.retrieve(
         query=processed_text,
+        image_paths=image_paths,
         save_embeddings=save_embeddings,
         embeddings_file=embeddings_file
     )
@@ -470,8 +470,9 @@ def outfits_recommend_from_prompt(
                 else:
                     chosen[cate].append(img_name)
 
-    # Recommend outfit not from just top query exclusively
-    # but from top items retrieved of previous model
+    # Recommend outfit not from just top items
+    # of a particular category exclusively
+    # but from top results retrieved of previous model
     outputs = {
         "first_item_cate": [],
         "outfit_recommend": []
