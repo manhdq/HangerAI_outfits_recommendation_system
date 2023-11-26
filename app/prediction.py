@@ -67,17 +67,18 @@ class Pipeline:
                 "semantic": "bci_s",
             },
         }[config.score_type_selection][config.feature_type_selection]
-        # self.attn = CrossAttention(
-        #     n_heads=4,
-        #     d_embed=512,
-        #     d_cross=128
+
+        # # self.attn = CrossAttention(
+        # #     n_heads=4,
+        # #     d_embed=512,
+        # #     d_cross=128
+        # # ).cuda(device=self.device)
+        # self.t_proj = nn.Linear(512, 128).cuda(device=self.device)
+        # self.attn = nn.MultiheadAttention(
+        #     embed_dim=128,
+        #     num_heads=4,
+        #     batch_first=True
         # ).cuda(device=self.device)
-        self.t_proj = nn.Linear(512, 128).cuda(device=self.device)
-        self.attn = nn.MultiheadAttention(
-            embed_dim=128,
-            num_heads=4,
-            batch_first=True
-        ).cuda(device=self.device)
 
         self.num_recommends_per_choice = config.num_recommends_per_choice
         self.num_recommends_for_composition = (
@@ -192,7 +193,7 @@ class Pipeline:
         inputs = self.add_inputs(self, inputs, recommend_choices)
         return inputs
 
-    def compute_score(self, net, input, user_id, scale=10.0, text_embedding=None):
+    def compute_score(self, net, input, olatent, user_id, scale=10.0):
         # print(self.storage.keys())
         # ilatents = [
         #     self.storage[user_id][v][self.type_selection]
@@ -206,28 +207,27 @@ class Pipeline:
         ilatents = np.stack(ilatents)
         ilatents = torch.from_numpy(ilatents).cuda(device=self.device)
 
-        if text_embedding is not None:
-            text_embedding = text_embedding.unsqueeze(1)
-            text_embedding = text_embedding.repeat(1, ilatents.size(0), 1)
-            ilatents = self.attn(
-                ilatents.unsqueeze(0),
-                text_embedding,
-                text_embedding
-            )[0]
-
         size = len(ilatents)
         indx, indy = np.triu_indices(size, k=1)
+
         # comb x D
-        x = ilatents[indx] * ilatents[indy]
+        pairwise = ilatents[indx] * ilatents[indy]
+        if olatent:
+            semwise = ilatents * olatent
+        
+        score_o = 0
         # Get score
         if self.hash_types == WEIGHTED_HASH_I:
-            score_i = net.core(x).mean()
+            score_i = net.core(pairwise).mean()
+        elif self.hash_types == WEIGHTED_HASH_BOTH:
+            score_i = net.core[0](pairwise).mean()
+            score_o = net.core[1](semwise).mean()
         else:
             ##TODO:
             raise
 
         ##TODO: Code for user score
-        score = score_i * (scale * 2.0)
+        score = (score_i + score_o) * (scale * 2.0)
         return score.cpu().detach().item()
 
     def outfit_recommend(
@@ -284,7 +284,7 @@ class Pipeline:
         recommend_choices: list,
         db,
         user_id,
-        text_embedding = None    
+        outfit_semantic = None    
     ):
         """Recommend outfit from database
 
@@ -313,9 +313,8 @@ class Pipeline:
         #         ]
         #         outputs[cate] = cate_recommended
 
-        if text_embedding is not None:
-            text_embedding = torch.from_numpy(text_embedding).cuda(device=self.device)
-            text_embedding = self.t_proj(text_embedding)
+        if outfit_semantic is not None:
+            outfit_semantic = torch.from_numpy(outfit_semantic).cuda(device=self.device)
         
         if (
             self.get_composed_recommendation
@@ -328,8 +327,8 @@ class Pipeline:
                     score = self.compute_score(
                         self.net,
                         input,
+                        olatent=outfit_semantic,
                         user_id,
-                        text_embedding=text_embedding
                     )
                     scores.append(score)
                 target_arg = sorted(
