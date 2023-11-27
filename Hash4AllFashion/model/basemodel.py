@@ -232,16 +232,16 @@ class TxtClassifier(nn.Module):
 class CoreMat(nn.Module):
     """Weighted hamming similarity."""
 
-    def __init__(self, dim):
+    def __init__(self, dim, weight=1.0):
         """Weights for this layer that is drawn from N(mu, std)."""
         super().__init__()
         self.dim = dim
         self.weight = nn.Parameter(torch.Tensor(1, dim))
-        self.init_weights()
+        self.init_weights(weight)
 
-    def init_weights(self):
+    def init_weights(self, weight):
         """Initialize weights."""
-        self.weight.data.fill_(1.0)
+        self.weight.data.fill_(weight)
 
     def forward(self, x):
         """Forward."""
