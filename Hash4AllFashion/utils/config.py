@@ -1,30 +1,22 @@
 """Configuration file."""
-NumCate = 11
+NumCate = 7
 CateName = [
-    "all-body",
+    "full-body",
     "bottom",
     "top",
     "outerwear",
     "bag",
-    "shoe",
+    "footwear",
     "accessory",
-    "scarf",
-    "hat",
-    "sunglass",
-    "jewellery",
 ]
 CateIdx = {
-    "all-body": 0,
+    "full-body": 0,
     "bottom": 1,
     "top": 2,
     "outerwear": 3,
     "bag": 4,
-    "shoe": 5,
+    "footwear": 5,
     "accessory": 6,
-    "scarf": 7,
-    "hat": 8,
-    "sunglass": 9,
-    "jewellery": 10,
 }
 
 NumPhase = 3
