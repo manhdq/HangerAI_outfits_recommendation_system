@@ -14,12 +14,20 @@ import torch.nn.functional as F
 from . import models
 from Hash4AllFashion import utils
 from Hash4AllFashion.utils import config as cfg
-from Hash4AllFashion.model import FashionNet, CrossAttention
+from Hash4AllFashion.model.fashionnet import FashionNet
 from Hash4AllFashion.dataset.transforms import get_img_trans
 
 ##TODO: Change this
-ID2CATE = {0: "top", 1: "bottom", 2: "bag", 3: "outerwear", 4: "shoe"}
-CATE2ID = {"top": 0, "bottom": 1, "bag": 2, "outerwear": 3, "shoe": 4}
+CATE2ID = {
+    "full-body": 0,
+    "bottom": 1,
+    "top": 2,
+    "outerwear": 3,
+    "bag": 4,
+    "footwear": 5,
+    "accessory": 6,
+}
+ID2CATE = {v: k for k, v in CATE2ID.items()}
 
 NO_WEIGHTED_HASH = 0
 WEIGHTED_HASH_U = 1
@@ -68,18 +76,6 @@ class Pipeline:
             },
         }[config.score_type_selection][config.feature_type_selection]
 
-        # # self.attn = CrossAttention(
-        # #     n_heads=4,
-        # #     d_embed=512,
-        # #     d_cross=128
-        # # ).cuda(device=self.device)
-        # self.t_proj = nn.Linear(512, 128).cuda(device=self.device)
-        # self.attn = nn.MultiheadAttention(
-        #     embed_dim=128,
-        #     num_heads=4,
-        #     batch_first=True
-        # ).cuda(device=self.device)
-
         self.num_recommends_per_choice = config.num_recommends_per_choice
         self.num_recommends_for_composition = (
             config.num_recommends_for_composition
@@ -97,10 +93,9 @@ class Pipeline:
         else:
             self.storage = dict()
 
-    def extract_feats_from_one_sample(self, img_pil):
-        img = img_pil.convert("RGB")
+    def extract_feats_from_one_sample(self, img):
         if self.transforms:
-            img = self.transforms(img)
+            img = self.transforms(image=img)["image"]
         img = img.unsqueeze(0)
         img = utils.to_device(img, self.device)
         with torch.no_grad():
@@ -212,6 +207,7 @@ class Pipeline:
 
         # comb x D
         pairwise = ilatents[indx] * ilatents[indy]
+        semwise = 0
         if olatent:
             semwise = ilatents * olatent
         
@@ -323,11 +319,11 @@ class Pipeline:
                 scores = []
                 inputs = self.get_inputs(item, recommend_choices, db, user_id)
 
-                for i, input in enumerate(inputs):
+                for input in inputs:
                     score = self.compute_score(
                         self.net,
                         input,
-                        olatent=outfit_semantic,
+                        outfit_semantic,
                         user_id,
                     )
                     scores.append(score)
