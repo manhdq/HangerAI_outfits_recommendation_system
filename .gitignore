@@ -10,4 +10,4 @@
 __pycache__
 
 test_code/*
-!test_code/storage_extract_img.py
+!test_code/storage_extract_imgs.py
