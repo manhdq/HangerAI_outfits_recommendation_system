@@ -118,6 +118,7 @@ class DataParam(_Param):
         nega_mode="RandomOnline",  # mode for negative outfits
         data_root="data/polyvore",  # data root
         list_fmt="image_list_{}",
+        outfit_desc=None,
         use_semantic=False,
         use_visual=True,
         image_root=None,  # image root if it's saved in another place
@@ -199,6 +200,10 @@ class DataParam(_Param):
         return os.path.join(self.data_root, self.data_set, f"{self.phase}.csv")
 
     @property
+    def outfit_semantic(self):
+        return os.path.join(self.data_root, f"{self.outfit_desc}.pkl")
+    
+    @property
     def semantic_fn(self):
         return os.path.join(self.data_root, "sentence_vector/semantic.pkl")
 
@@ -247,6 +252,7 @@ class NetParam(_Param):
         name="FashionNet",
         num_users=630,
         dim=128,
+        outfit_semantic_dim=512,
         single=False,
         binary01=False,
         triplet=False,
@@ -262,6 +268,8 @@ class NetParam(_Param):
         margin=None,
         debug=False,
         shared_weight_network=False,
+        pairwise_weight=1.0,
+        outfit_semantic_weight=1.0
     )
 
     def setup(self):
