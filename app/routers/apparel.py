@@ -55,9 +55,9 @@ def save_storage(pkl_file, storage):
 
 
 ## Get config, pipeline
-config_path = "Hash4AllFashion/configs/deploy/FHN_VSE_T3_visual.yaml"
+config_path = "Hash4AllFashion/configs/deploy/FHN_VSE_T3_visual_new.yaml"
 env = "colab"
-table_name = "hanger_apparels_100"
+table_name = "new_hash_apparels_100"
 pseudo_s3_storage_file = f"storages/{table_name}.pkl"
 
 ##TODO: Delete logger
@@ -81,7 +81,7 @@ hashes_file = osp.abspath(
         project_dir,
         "HangerAI_outfits_recommendation_system",
         "storages",
-        "hanger_apparels_100.pkl",
+        "new_hash_apparels_100.pkl",
     )
 )
 
@@ -124,6 +124,7 @@ ret = FashionRetrieval(
 # Hyperparams for outfit recommend
 # outfit_recommend_option = {"top": [], "bottom": [], "bag": [], "outerwear": [], "shoe": []}
 outfit_recommend_option = defaultdict(list)
+# cates = ["top", "bottom", "bag", "outerwear", "full-body", "footwear", "accessory"]
 cates = ["top", "bottom", "bag", "outerwear", "shoe"]
 
 top_k = 20
@@ -444,7 +445,7 @@ def outfits_recommend_from_prompt(
     # Compose outfits from retrieved items
     chosen = defaultdict(list)
 
-    for cate in ["top", "bottom", "bag", "outerwear", "shoe"]:
+    for cate in cates:
         cate_items = outfit_recommend_option[cate]
         if isinstance(cate_items, list):
             for img_name in cate_items:
