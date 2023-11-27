@@ -488,10 +488,10 @@ def outfits_recommend_from_prompt(
             }
             output = pipeline.outfit_recommend_from_chosen(
                 given_items=dict_given_items,
-                # text_embedding=text_embedding,
                 recommend_choices=recommend_choices,
                 db=db,
                 user_id=user_id,
+                # outfit_semantic=text_embedding
             )["outfit_recommend"][0]
 
             # Preprocess the output
