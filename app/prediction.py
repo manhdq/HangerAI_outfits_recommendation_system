@@ -17,6 +17,8 @@ from Hash4AllFashion.utils import config as cfg
 from Hash4AllFashion.model.fashionnet import FashionNet
 from Hash4AllFashion.dataset.transforms import get_img_trans
 
+from icecream import ic
+
 ##TODO: Change this
 CATE2ID = {
     "full-body": 0,
@@ -208,7 +210,7 @@ class Pipeline:
         # comb x D
         pairwise = ilatents[indx] * ilatents[indy]
         semwise = 0
-        if olatent:
+        if olatent is not None:
             semwise = ilatents * olatent
         
         score_o = 0
@@ -311,7 +313,8 @@ class Pipeline:
 
         if outfit_semantic is not None:
             outfit_semantic = torch.from_numpy(outfit_semantic).cuda(device=self.device)
-        
+            outfit_semantic = self.net.encoder_o(outfit_semantic)
+
         if (
             self.get_composed_recommendation
         ):  # Recommend outfit from recommended above
