@@ -327,7 +327,7 @@ class Pipeline:
                     score = self.compute_score(
                         self.net,
                         input,
-                        olatent=outfit_semantic,
+                        outfit_semantic,
                         user_id,
                     )
                     scores.append(score)
