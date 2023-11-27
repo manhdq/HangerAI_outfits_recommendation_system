@@ -1,6 +1,13 @@
+**/__pycache__
+*~
+*#
+
 *.jpg
 *.png
 *.net
 *.pyc
 *.pkl
 __pycache__
+
+test_code/*
+!test_code/storage_extract_img.py
