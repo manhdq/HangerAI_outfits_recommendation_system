@@ -12,23 +12,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from . import models
-from Hash4AllFashion import utils
-from Hash4AllFashion.utils import config as cfg
-from Hash4AllFashion.model.fashionnet import FashionNet
-from Hash4AllFashion.dataset.transforms import get_img_trans
+from Hash4AllFashion_deploy import utils
+from Hash4AllFashion_deploy.utils import config as cfg
+from Hash4AllFashion_deploy.model.fashionnet import FashionNet
+from Hash4AllFashion_deploy.dataset.transforms import get_img_trans
 
 from icecream import ic
 
 ##TODO: Change this
-CATE2ID = {
-    "full-body": 0,
-    "bottom": 1,
-    "top": 2,
-    "outerwear": 3,
-    "bag": 4,
-    "footwear": 5,
-    "accessory": 6,
-}
+CATE2ID = cfg.CateIdx
 ID2CATE = {v: k for k, v in CATE2ID.items()}
 
 NO_WEIGHTED_HASH = 0
@@ -45,10 +37,12 @@ def get_net(config):
     assert config.load_trained is not None
 
     # Dimension of latent codes
-    net = FashionNet(net_param, config.train_data_param.cate_selection)
+    net = FashionNet(net_param, cfg.SelectCate)
     # Load model from pre-trained file
     num_devices = torch.cuda.device_count()
     map_location = {"cuda:{}".format(i): "cpu" for i in range(num_devices)}
+
+    print(f"Load trained model from {config.load_trained}")
     state_dict = torch.load(config.load_trained, map_location=map_location)
     # load pre-trained model
     net.load_state_dict(state_dict)
@@ -61,9 +55,11 @@ class Pipeline:
     def __init__(self, config, storage_path):
         self.net = get_net(config)
         self.device = config.gpus[0]
-        self.transforms = get_img_trans(
-            "val", config.test_data_param.image_size
-        )
+        self.transforms = None
+        if config.transforms:
+            self.transforms = get_img_trans(
+                "val", config.test_data_param.image_size
+            )
 
         self.hash_types = config.net_param.hash_types
 
