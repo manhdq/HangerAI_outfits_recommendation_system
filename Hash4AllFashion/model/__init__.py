@@ -1,1 +1,0 @@
-from .fashionnet import FashionNet
