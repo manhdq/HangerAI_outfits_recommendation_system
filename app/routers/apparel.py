@@ -7,6 +7,7 @@ import pickle5 as pickle
 from collections import defaultdict
 import numpy as np
 from pprint import pprint
+from icecream import ic
 
 from fastapi import status, HTTPException, Depends, APIRouter, Response
 from pydantic import BaseModel
@@ -15,8 +16,8 @@ from sqlalchemy.orm import Session
 from .. import models, utils, prediction
 from ..schemas import apparel as schemas
 from ..database import get_db
-from Hash4AllFashion.utils.param import FashionDeployParam
-from Hash4AllFashion.utils.logger import Logger, config_log
+from Hash4AllFashion_deploy.utils.param import FashionDeployParam
+from Hash4AllFashion_deploy.utils.logger import Logger, config_log
 
 sys.path += ["CapstoneProject"]
 
@@ -26,6 +27,19 @@ from tools import load_json
 router = APIRouter(prefix="/items", tags=["Apparels"])
 
 
+# Hyperparams for outfit recommend
+outfit_recommend_option = defaultdict(list)
+# cates = ["top", "bottom", "bag", "outerwear", "full-body", "footwear", "accessory"]
+cates = ["top", "bottom", "bag", "outerwear", "shoe"]
+
+top_k = 20
+n_outfits = 4
+# chosen_cate = "top"
+chosen_cate = "dynamic"
+empty_cate_extras = 5
+
+
+# Important functions
 def get_logger(env, config):
     if env == "local":
         ##TODO: Modify this logger name
@@ -54,10 +68,18 @@ def save_storage(pkl_file, storage):
         pickle.dump(storage, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
+def load_meta(metadata_file):
+    metadata = load_json(metadata_file)
+
+    return metadata
+
+
+name = lambda x: osp.basename(x).split(".")[0]
+
 ## Get config, pipeline
-config_path = "Hash4AllFashion/configs/deploy/FHN_VSE_T3_visual_new.yaml"
+config_path = "Hash4AllFashion_deploy/configs/deploy/FHN_VSE_T3_visual_new.yaml"
 env = "colab"
-table_name = "new_hash_apparels_100"
+table_name = "hash_apparels_11_29"
 pseudo_s3_storage_file = f"storages/{table_name}.pkl"
 
 ##TODO: Delete logger
@@ -68,49 +90,18 @@ config = FashionDeployParam(**kwargs)
 pipeline = prediction.Pipeline(config, storage_path=pseudo_s3_storage_file)
 
 ## Get data, embedding for fashion retrieval
-project_dir = "/home/dungmaster/Projects/Machine Learning"
-par_dir = osp.join(
-    project_dir, "HangerAI_outfits_recommendation_system/CapstoneProject"
-)
+root_dir = "/home/dungmaster/Projects/Machine Learning/HangerAI_outfits_recommendation_system/CapstoneProject"
 image_dir = "/home/dungmaster/Datasets/polyvore_outfits/sample_images"
-# image_dir = "./app/static"
 
-# TODO: change storage pkl file to more data, preferably full polyvore data
-hashes_file = osp.abspath(
-    osp.join(
-        project_dir,
-        "HangerAI_outfits_recommendation_system",
-        "storages",
-        "new_hash_apparels_100.pkl",
-    )
-)
-
-embeddings_file = osp.join(par_dir, "model_embeddings", "polyvore_502.txt")
-
+embeddings_file = osp.join(root_dir, "model_embeddings", "polyvore_502.txt")
 metadata_file = (
     "/home/dungmaster/Datasets/polyvore_outfits/polyvore_item_metadata.json"
 )
 
 image_embeddings = None
 save_embeddings = True
-name = lambda x: osp.basename(x).split(".")[0]
 
-
-def load_image_files(hfile):
-    pkl_file = open(hfile, "rb")
-    hashes_polyvore = pickle.load(pkl_file)[1]
-    image_names = list(hashes_polyvore.keys())
-    image_paths = [osp.join(image_dir, name) for name in image_names]
-    return image_paths
-
-
-def load_meta(metadata_file):
-    metadata = load_json(metadata_file)
-
-    return metadata
-
-
-image_paths = load_image_files(hashes_file)
+image_paths = [osp.join(image_dir, str(name)) for name in list(pipeline.storage[1].keys())]
 metadata = load_meta(metadata_file)
 
 if osp.exists(embeddings_file):
@@ -120,18 +111,6 @@ if osp.exists(embeddings_file):
 ret = FashionRetrieval(
     image_embeddings=image_embeddings
 )
-
-# Hyperparams for outfit recommend
-# outfit_recommend_option = {"top": [], "bottom": [], "bag": [], "outerwear": [], "shoe": []}
-outfit_recommend_option = defaultdict(list)
-# cates = ["top", "bottom", "bag", "outerwear", "full-body", "footwear", "accessory"]
-cates = ["top", "bottom", "bag", "outerwear", "shoe"]
-
-top_k = 20
-n_outfits = 4
-# chosen_cate = "top"
-chosen_cate = "dynamic"
-empty_cate_extras = 5
 
 
 #### GET ####
