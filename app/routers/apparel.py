@@ -79,15 +79,16 @@ name = lambda x: osp.basename(x).split(".")[0]
 ## Get config, pipeline
 config_path = "Hash4AllFashion_deploy/configs/deploy/FHN_VSE_T3_visual_new.yaml"
 env = "colab"
-table_name = "hash_apparels_11_29"
-pseudo_s3_storage_file = f"storages/{table_name}.pkl"
 
 ##TODO: Delete logger
 with open(config_path, "r") as f:
     kwargs = yaml.load(f, Loader=yaml.FullLoader)
 config = FashionDeployParam(**kwargs)
 
-pipeline = prediction.Pipeline(config, storage_path=pseudo_s3_storage_file)
+pipeline = prediction.Pipeline(
+    config,
+    storage_path=config.hash_storage
+)
 
 ## Get data, embedding for fashion retrieval
 root_dir = "/home/dungmaster/Projects/Machine Learning/HangerAI_outfits_recommendation_system/CapstoneProject"
