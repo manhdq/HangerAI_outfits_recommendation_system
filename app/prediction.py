@@ -33,17 +33,19 @@ def get_net(config):
     """Get network."""
     # Get net param
     net_param = config.net_param
+    load_trained = net_param.load_trained
 
-    assert config.load_trained is not None
+    assert load_trained  is not None
 
     # Dimension of latent codes
     net = FashionNet(net_param, cfg.SelectCate)
+
     # Load model from pre-trained file
     num_devices = torch.cuda.device_count()
     map_location = {"cuda:{}".format(i): "cpu" for i in range(num_devices)}
+    print(f"Load trained model from {load_trained}")
+    state_dict = torch.load(load_trained, map_location=map_location)
 
-    print(f"Load trained model from {config.load_trained}")
-    state_dict = torch.load(config.load_trained, map_location=map_location)
     # load pre-trained model
     net.load_state_dict(state_dict)
     net.cuda(device=config.gpus[0])
