@@ -4,6 +4,7 @@ import os.path as osp
 import yaml
 import logging
 import pickle5 as pickle
+import json
 from collections import defaultdict
 import numpy as np
 from pprint import pprint
@@ -32,11 +33,16 @@ outfit_recommend_option = defaultdict(list)
 # cates = ["top", "bottom", "bag", "outerwear", "full-body", "footwear", "accessory"]
 cates = ["top", "bottom", "bag", "outerwear", "shoe"]
 
-top_k = 20
 n_outfits = 4
-# chosen_cate = "top"
 chosen_cate = "dynamic"
+mode = "each"  # get top k items from each category then compose an outfit
+# mode = "all"  # get top k items from all categories then compose an outfit
 empty_cate_extras = 5
+
+if mode == "all":
+    top_k = 20
+elif mode == "each":
+    top_k = 7
 
 
 # Important functions
@@ -70,8 +76,15 @@ def save_storage(pkl_file, storage):
 
 def load_meta(metadata_file):
     metadata = load_json(metadata_file)
-
     return metadata
+
+
+def get_category(path):
+    image_id = name(path)
+    category = metadata[image_id]["semantic_category"]
+    if category != "outerwear":
+        category = category[:-1]
+    return image_id, category
 
 
 name = lambda x: osp.basename(x).split(".")[0]
@@ -90,24 +103,30 @@ pipeline = prediction.Pipeline(
     storage_path=config.hash_storage
 )
 
-## Get data, embedding for fashion retrieval
+## Important paths to data
 root_dir = "/home/dungmaster/Projects/Machine Learning/HangerAI_outfits_recommendation_system/CapstoneProject"
-image_dir = "/home/dungmaster/Datasets/polyvore_outfits/sample_images"
+embeddings_dir = osp.join(root_dir, "model_embeddings", "polyvore")
 
-embeddings_file = osp.join(root_dir, "model_embeddings", "polyvore_502.txt")
-metadata_file = (
-    "/home/dungmaster/Datasets/polyvore_outfits/polyvore_item_metadata.json"
-)
+data_dir = "/home/dungmaster/Datasets/polyvore_outfits"
+image_dir = osp.join(data_dir, "sample_images")
+metadata_file = osp.join(data_dir, "polyvore_item_metadata.json")
+item2cate_fpath = osp.join(data_dir, "item_cate_502.json")
+
+embeddings_file = None
+if mode == "all":
+    embeddings_file = osp.join(root_dir, "model_embeddings", "polyvore_502.txt")
+
+## Get data, embedding for fashion retrieval
 
 image_embeddings = None
-save_embeddings = True
+save_embeddings = False
 
 image_paths = [osp.join(image_dir, str(name)) for name in list(pipeline.storage[1].keys())]
 metadata = load_meta(metadata_file)
+item_cate_map = json.load(open(item2cate_fpath, 'r'))
 
-if osp.exists(embeddings_file):
+if embeddings_file is not None and osp.exists(embeddings_file):
     image_embeddings = np.loadtxt(embeddings_file)
-    save_embeddings = False
 
 ret = FashionRetrieval(
     image_embeddings=image_embeddings
@@ -382,12 +401,7 @@ def outfits_recommend_from_chosen(
     return outputs
 
 
-def get_category(path):
-    image_id = name(path)
-    category = metadata[image_id]["semantic_category"]
-    if category != "outerwear":
-        category = category[:-1]
-    return image_id, category
+
 
 
 @router.post("/{user_id}/outfits_recommend_from_prompt/")
@@ -396,31 +410,50 @@ def outfits_recommend_from_prompt(
     prompt: schemas.TextInput,
     db: Session = Depends(get_db),
 ):
-    # Retrieve items matching the prompt
     processed_text = prompt.text.lower()
-    found_image_paths, text_embedding = ret.retrieve(
-        query=processed_text,
-        image_paths=image_paths,
-        save_embeddings=save_embeddings,
-        embeddings_file=embeddings_file
-    )
-    prompt_matched_image_paths = found_image_paths[:top_k]
-    for image_path in prompt_matched_image_paths:
-        image_id, category = get_category(image_path)
-        outfit_recommend_option[category].append(image_id)
 
-    # Add items in categories in which there is no item
-    # pprint(outfit_recommend_option)
-    for cate in cates:
-        count = 0
-        if cate not in list(outfit_recommend_option.keys()):
-            for image_path in found_image_paths[top_k:]:
-                image_id, category = get_category(image_path)
-                if category == cate:
-                    outfit_recommend_option[cate].append(image_id)
-                    count += 1
-                if count >= empty_cate_extras:
-                    break
+    # Retrieve items matching the prompt
+    if mode == "all":
+        found_image_paths, text_embedding = ret.retrieve(
+            query=processed_text,
+            image_paths=image_paths,
+            save_embeddings=save_embeddings,
+            embeddings_file=embeddings_file
+        )
+        prompt_matched_image_paths = found_image_paths[:top_k]
+        for image_path in prompt_matched_image_paths:
+            image_id, category = get_category(image_path)
+            outfit_recommend_option[category].append(image_id)
+
+        # Add items in categories in which there is no item
+        # pprint(outfit_recommend_option)
+        for cate in cates:
+            count = 0
+            if cate not in list(outfit_recommend_option.keys()):
+                for image_path in found_image_paths[top_k:]:
+                    image_id, category = get_category(image_path)
+                    if category == cate:
+                        outfit_recommend_option[cate].append(image_id)
+                        count += 1
+                    if count >= empty_cate_extras:
+                        break            
+
+    elif mode == "each":
+        for search_cate in cates:
+            embeddings_file = osp.join(embeddings_dir, f"polyvore_{search_cate}_502.txt")
+            image_paths = [
+                osp.join(image_dir, img_fn) for img_fn in item_cate_map[search_cate]
+            ]
+            found_image_paths, text_embedding = ret.retrieve(
+                query=processed_text,
+                image_paths=image_paths,
+                # save_embeddings=save_embeddings,
+                embeddings_file=embeddings_file
+            )
+            prompt_matched_image_paths = found_image_paths[:top_k]
+            for image_path in prompt_matched_image_paths:
+                image_id = name(image_path)
+                outfit_recommend_option[search_cate].append(image_id)    
 
     # Compose outfits from retrieved items
     chosen = defaultdict(list)
