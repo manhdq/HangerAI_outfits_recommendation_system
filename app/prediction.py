@@ -100,14 +100,19 @@ class Pipeline:
         img = img.unsqueeze(0)
         img = utils.to_device(img, self.device)
         with torch.no_grad():
-            (
-                lcis_v,
-                lcis_s,
-                bcis_v,
-                bcis_s,
-                visual_logits,
-            ) = self.net.extract_features(img)
-            visual_fc = F.softmax(visual_logits, dim=1)
+            # (
+            #     lcis_v,
+            #     lcis_s,
+            #     bcis_v,
+            #     bcis_s,
+            #     visual_logits,
+            # ) = self.net.extract_features(img)
+            feats = self.net.extract_features(img)
+
+        visual_logits = feats["visual_fc"]
+        lcis_v, bcis_v = feats["lcis_v"], feats["bcis_v"]
+
+        visual_fc = F.softmax(visual_logits, dim=1)
 
         ##TODO: Set semantic feats later
         lci_v = lcis_v[0].cpu().detach().numpy()
