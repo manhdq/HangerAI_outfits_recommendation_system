@@ -33,7 +33,7 @@ storage_path = osp.abspath(
         project_dir,
         "HangerAI_outfits_recommendation_system",
         "storages",
-        "hanger_apparels_100.pkl",
+        "hash_apparels_old.pkl",
     )
 )
 storage_path
