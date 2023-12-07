@@ -57,6 +57,7 @@ def get_net(config):
 class Pipeline:
     def __init__(self, config, storage_path):
         self.net = get_net(config)
+        self.use_outfit_semantic = self.net.param.use_outfit_semantic
         self.device = config.gpus[0]
         self.transforms = None
         if config.transforms:
