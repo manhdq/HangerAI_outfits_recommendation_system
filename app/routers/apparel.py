@@ -90,7 +90,8 @@ def get_category(path):
 name = lambda x: osp.basename(x).split(".")[0]
 
 ## Get config, pipeline
-config_path = "Hash4AllFashion_deploy/configs/deploy/FHN_VSE_T3_visual_new.yaml"
+# config_path = "Hash4AllFashion_deploy/configs/deploy/FHN_VSE_T3_visual_new.yaml"
+config_path = "Hash4AllFashion_deploy/configs/deploy/FHN_VOE_T3_fashion32.yaml"
 env = "colab"
 
 ##TODO: Delete logger
@@ -457,6 +458,9 @@ def outfits_recommend_from_prompt(
 
     # Compose outfits from retrieved items
     chosen = defaultdict(list)
+
+    if not pipeline.use_outfit_semantic:
+        text_embedding = None
 
     for cate in cates:
         cate_items = outfit_recommend_option[cate]
