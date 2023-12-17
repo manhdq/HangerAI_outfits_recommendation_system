@@ -34,7 +34,6 @@ outfit_recommend_option = defaultdict(list)
 cates = ["top", "bottom", "bag", "outerwear", "shoe"]
 
 n_outfits = 4
-chosen_cate = "dynamic"
 mode = "each"  # get top k items from each category then compose an outfit
 # mode = "all"  # get top k items from all categories then compose an outfit
 empty_cate_extras = 5
@@ -87,12 +86,10 @@ def get_category(path):
     return image_id, category
 
 
-name = lambda x: osp.basename(x).split(".")[0]
-
 ## Get config, pipeline
-# config_path = "Hash4AllFashion_deploy/configs/deploy/FHN_VSE_T3_visual_new.yaml"
 config_path = "Hash4AllFashion_deploy/configs/deploy/FHN_VOE_T3_fashion32.yaml"
-env = "colab"
+# config_path = "Hash4AllFashion_deploy/configs/deploy/FHN_VSE_T3_fashion32.yaml"
+env = "local"
 
 ##TODO: Delete logger
 with open(config_path, "r") as f:
@@ -402,9 +399,6 @@ def outfits_recommend_from_chosen(
     return outputs
 
 
-
-
-
 @router.post("/{user_id}/outfits_recommend_from_prompt/")
 def outfits_recommend_from_prompt(
     user_id: int,
@@ -453,7 +447,7 @@ def outfits_recommend_from_prompt(
             )
             prompt_matched_image_paths = found_image_paths[:top_k]
             for image_path in prompt_matched_image_paths:
-                image_id = name(image_path)
+                image_id = osp.basename(image_path) 
                 outfit_recommend_option[search_cate].append(image_id)    
 
     # Compose outfits from retrieved items
@@ -495,11 +489,36 @@ def outfits_recommend_from_prompt(
         "first_item_cate": [],
         "outfit_recommend": []
     }
-    if chosen_cate == "dynamic":
+    first_cate = "top"
+
+    if mode == "each":
+        for image_id in outfit_recommend_option[first_cate]:
+            dict_given_items = [{first_cate: image_id}]
+            recommend_choices = {
+                k: v for k, v in outfit_recommend_option.items() if k != first_cate
+            }
+            output = pipeline.outfit_recommend_from_chosen(
+                given_items=dict_given_items,
+                recommend_choices=recommend_choices,
+                db=db,
+                user_id=user_id,
+                outfit_semantic=text_embedding
+            )["outfit_recommend"][0]
+
+            # Preprocess the output
+            output = {cate: osp.join(image_dir, name) for cate, name in output.items()}
+            
+            # Remove duplicate outfits
+            if output not in outputs["outfit_recommend"]:
+                outputs["first_item_cate"].append(first_cate)
+                outputs["outfit_recommend"].append(output)
+
+            if len(outputs["outfit_recommend"]) >= n_outfits:
+                break
+
+    elif mode == "all":
         for ind, image_path in enumerate(found_image_paths[:n_outfits]):
             image_id, category = get_category(image_path)
-            # list_given_items = chosen[category]
-            # dict_given_items = [{category: item} for item in list_given_items]
             dict_given_items = [{category: image_id + ".jpg"}]
             recommend_choices = {
                 k: v for k, v in chosen.items() if k != category
@@ -514,25 +533,11 @@ def outfits_recommend_from_prompt(
 
             # Preprocess the output
             output = {cate: osp.join(image_dir, name) for cate, name in output.items()}
-            # output["Outfit Number"] = ind
             
             # Remove duplicate outfits
             if output not in outputs["outfit_recommend"]:
                 outputs["first_item_cate"].append(category)
                 outputs["outfit_recommend"].append(output)
-    else:
-        list_given_items = chosen[chosen_cate]
-        dict_given_items = [{chosen_cate: item} for item in list_given_items]
-        recommend_choices = {
-            k: v for k, v in chosen.items() if k != chosen_cate
-        }
-
-        outputs = pipeline.outfit_recommend_from_chosen(
-            given_items=dict_given_items,
-            recommend_choices=recommend_choices,
-            db=db,
-            user_id=user_id,
-        )
 
     outfit_recommend_option.clear()
 
