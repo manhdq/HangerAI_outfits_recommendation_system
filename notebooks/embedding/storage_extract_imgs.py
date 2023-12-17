@@ -40,7 +40,9 @@ storage_path
 
 # %% [markdown]
 ### Load model
-config_path = "../Hash4AllFashion_deploy/configs/deploy/FHN_VSE_T3_visual_new.yaml"
+# config_path = "../Hash4AllFashion_deploy/configs/deploy/FHN_VSE_T3_visual_new.yaml"
+# config_path = "../Hash4AllFashion_deploy/configs/deploy/FHN_VOE_T3_fashion32.yaml"
+config_path = "../Hash4AllFashion_deploy/configs/deploy/FHN_VSE_T3_fashion32.yaml"
 
 with open(config_path, "r") as f:
     kwargs = yaml.load(f, Loader=yaml.FullLoader)
@@ -120,7 +122,9 @@ new_storage_path = osp.abspath(
         project_dir,
         "HangerAI_outfits_recommendation_system",
         "storages",
-        "hash_apparels_old.pkl",
+        "hash_apparels_old_classify.pkl",        
+        # "hash_apparels_11_26_latest.pkl",
+        # "hash_apparels_12_10.pkl",        
     )
 )
 new_storage_path
