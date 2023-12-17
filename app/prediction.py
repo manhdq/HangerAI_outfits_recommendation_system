@@ -300,22 +300,6 @@ class Pipeline:
         start_time = time.time()
         outputs = defaultdict(list)
 
-        # for item in given_items:
-        #     for cate_choice in recommend_choices:
-        #         scores = []
-        #         cate = cate_choice.keys()[0]
-        #         inputs = self.add_inputs(self, [item], cate_choice)
-        #         for i, input in enumerate(inputs):
-        #             score = self.compute_score(self.net, input, user_id)
-        #             scores.append(score)
-        #         target_arg = sorted(range(len(scores)), key=lambda k: -scores[k])
-
-        #         cate_recommended = [
-        #             inputs[i][cate]
-        #             for i in target_arg[: self.num_recommends_per_choice]
-        #         ]
-        #         outputs[cate] = cate_recommended
-
         if outfit_semantic is not None:
             outfit_semantic = torch.from_numpy(outfit_semantic).cuda(device=self.device)
             outfit_semantic = self.net.encoder_o(outfit_semantic)
