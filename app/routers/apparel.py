@@ -98,7 +98,8 @@ config = FashionDeployParam(**kwargs)
 
 pipeline = prediction.Pipeline(
     config,
-    storage_path=config.hash_storage
+    storage_path=config.hash_storage,
+    minimal=False
 )
 
 ## Important paths to data
