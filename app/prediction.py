@@ -15,6 +15,7 @@ from . import models
 from Hash4AllFashion_deploy import utils
 from Hash4AllFashion_deploy.utils import config as cfg
 from Hash4AllFashion_deploy.model.fashionnet import FashionNet
+from Hash4AllFashion_deploy.model.basemodel import CoreMat, TxtEncoder
 from Hash4AllFashion_deploy.dataset.transforms import get_img_trans
 
 from icecream import ic
@@ -54,18 +55,55 @@ def get_net(config):
     return net
 
 
+def get_pretrained(net, path, config):
+    # Load model from pre-trained file
+    num_devices = torch.cuda.device_count()
+    map_location = {"cuda:{}".format(i): "cpu" for i in range(num_devices)}
+    print(f"Load trained model from {path}")
+    state_dict = torch.load(path, map_location=map_location)
+
+    # load pre-trained model
+    net.load_state_dict(state_dict)
+    net.cuda(device=config.gpus[0])
+    net.eval()  # Unable training
+    return net    
+
+
 class Pipeline:
-    def __init__(self, config, storage_path):
-        self.net = get_net(config)
-        self.use_outfit_semantic = self.net.param.use_outfit_semantic
+    def __init__(self, config, storage_path, minimal=True):
+        net_param = config.net_param
+        self.minimal = minimal
+        self.hash_types = net_param.hash_types
+        self.use_outfit_semantic = net_param.use_outfit_semantic
+        self.net = None
+
+        if self.minimal:
+            if self.hash_types == WEIGHTED_HASH_I:
+                core = CoreMat(net_param.dim, net_param.pairwise_weight),
+            elif self.hash_types == WEIGHTED_HASH_BOTH:
+                core = nn.ModuleList(
+                    [
+                        CoreMat(net_param.dim, net_param.pairwise_weight),
+                        CoreMat(net_param.dim, net_param.outfit_semantic_weight)
+                    ]
+                )
+
+            self.core = get_pretrained(core, net_param.core_trained, config)
+            if self.use_outfit_semantic:
+                encoder_o = TxtEncoder(net_param.outfit_semantic_dim, net_param)
+                self.encoder_o = get_pretrained(encoder_o, net_param.encoder_o_trained, config)
+        else:
+            self.net = get_net(config)
+            self.core = self.net.core
+            if self.use_outfit_semantic:
+                self.encoder_o = self.net.encoder_o
+        
         self.device = config.gpus[0]
         self.transforms = None
         if config.transforms:
             self.transforms = get_img_trans(
                 "val", config.test_data_param.image_size
             )
-
-        self.hash_types = config.net_param.hash_types
 
         self.type_selection = {
             "latent": {
@@ -195,7 +233,7 @@ class Pipeline:
         inputs = self.add_inputs(self, inputs, recommend_choices)
         return inputs
 
-    def compute_score(self, net, input, olatent, user_id, scale=10.0):
+    def compute_score(self, input, olatent, user_id, scale=10.0):
         # print(self.storage.keys())
         # ilatents = [
         #     self.storage[user_id][v][self.type_selection]
@@ -221,10 +259,10 @@ class Pipeline:
         score_o = 0
         # Get score
         if self.hash_types == WEIGHTED_HASH_I:
-            score_i = net.core(pairwise).mean()
+            score_i = self.core(pairwise).mean()
         elif self.hash_types == WEIGHTED_HASH_BOTH:
-            score_i = net.core[0](pairwise).mean()
-            score_o = net.core[1](semwise).mean()
+            score_i = self.core[0](pairwise).mean()
+            score_o = self.core[1](semwise).mean()
         else:
             ##TODO:
             raise
@@ -251,7 +289,7 @@ class Pipeline:
             scores = []
             inputs = self.get_inputs(chosen, {cate_choice: "all"}, db, user_id)
             for i, input in enumerate(inputs):
-                score = self.compute_score(self.net, input, user_id)
+                score = self.compute_score(input, user_id)
                 scores.append(score)
             target_arg = sorted(range(len(scores)), key=lambda k: -scores[k])
 
@@ -268,7 +306,7 @@ class Pipeline:
             inputs = self.get_inputs(chosen, outputs, db, user_id)
 
             for i, input in enumerate(inputs):
-                score = self.compute_score(self.net, input, user_id)
+                score = self.compute_score(input, user_id)
                 scores.append(score)
             target_arg = sorted(range(len(scores)), key=lambda k: -scores[k])
             recommeded_outfits = [
@@ -302,7 +340,7 @@ class Pipeline:
 
         if outfit_semantic is not None:
             outfit_semantic = torch.from_numpy(outfit_semantic).cuda(device=self.device)
-            outfit_semantic = self.net.encoder_o(outfit_semantic)
+            outfit_semantic = self.encoder_o(outfit_semantic)
 
         if (
             self.get_composed_recommendation
@@ -313,7 +351,6 @@ class Pipeline:
 
                 for input in inputs:
                     score = self.compute_score(
-                        self.net,
                         input,
                         outfit_semantic,
                         user_id,
