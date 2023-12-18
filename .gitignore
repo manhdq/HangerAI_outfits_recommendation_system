@@ -7,7 +7,13 @@
 *.net
 *.pyc
 *.pkl
+*.yaml
 __pycache__
+CapstoneProject/
+Hash4AllFashion_deploy/
+Hash4AllFashion_train/
+Data_processed/
+reproducible_code/
 
 test_code/*
 !test_code/storage_extract_imgs.py
