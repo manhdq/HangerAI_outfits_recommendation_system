@@ -108,4 +108,79 @@ for name, param in state_dict.items():
         param = param.data
         print((state_dict[name] == param).all())
 
+# %% [markdown]
+# ### Save Encoder_O module
+encoder_o = model.encoder_o
+encoder_o
+
+# %%
+encoder_o_pth =  "../../Hash4AllFashion_deploy/checkpoints/11_26_23/encoder_o_best_11_26.pt"
+torch.save(encoder_o.state_dict(), encoder_o_pth)
+
+# %% [markdown]
+# ### Load again and check if weight is equal to original model's weight
+class LatentCode(nn.Module):
+    """Basic class for learning latent code."""
+
+    def __init__(self, param):
+        """Latent code.
+
+        Parameters:
+        -----------
+        See utils.param.NetParam
+        """
+        super().__init__()
+        self.param = param
+        self.register_buffer("scale", torch.ones(1))
+
+    def set_scale(self, value):
+        """Set the scale of tanh layer."""
+        self.scale.fill_(value)
+
+    def feat(self, x):
+        """Compute the feature of all images."""
+        raise NotImplementedError
+
+    def forward(self, x):
+        """Forward a feature from DeepContent."""
+        x = self.feat(x)
+        if self.param.without_binary:
+            return x
+        if self.param.scale_tanh:
+            x = torch.mul(x, self.scale)
+        if self.param.binary01:
+            return 0.5 * (torch.tanh(x) + 1)
+        # shape N x D
+        return torch.tanh(x).view(-1, self.param.dim)
+
+class TxtEncoder(LatentCode):
+    def __init__(self, in_feature, param):
+        super().__init__(param)
+        self.encoder = nn.Sequential(
+            nn.Linear(in_feature, 1024),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(1024, param.dim, bias=False),
+        )
+
+    def feat(self, x):
+        return self.encoder(x)
+
+    def init_weights(self):
+        """Initialize weights for encoder with pre-trained model."""
+        nn.init.normal_(self.encoder[0].weight.data, std=0.01)
+        nn.init.constant_(self.encoder[0].bias.data, 0)
+        nn.init.normal_(self.encoder[-1].weight.data, std=0.01)
+
+# %%
+encoder_o_saved = TxtEncoder(config.net_param.outfit_semantic_dim, config.net_param)
+state_dict = torch.load(encoder_o_pth)
+encoder_o_saved.load_state_dict(state_dict)
+
+# %%
+for name, param in state_dict.items():
+    if name in model.encoder_o.state_dict().keys():
+        param = param.data
+        print((state_dict[name] == param).all())
+
 # %%
