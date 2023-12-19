@@ -127,9 +127,20 @@ class Pipeline:
         self.outfit_recommend_option = defaultdict(list)
 
         ### Paths ###
-        self.storage_path = param.path.storage_path
-        self.image_embeddings = np.load(param.path.img_embedding_file)
-        self.item_cate_map = pd.read_csv(param.path.item_info_file)
+        data_dir_path = param.path.data_dir_path
+        embedding_dir_path = osp.join(data_dir_path, param.path.embedding_dir)
+
+        # Load some files
+        compose_embeddings_path = osp.join(embedding_dir_path, param.path.compose_embedding_file)
+        if osp.exists(compose_embeddings_path):
+            with open(compose_embeddings_path, "rb") as file:
+                loaded_data = pickle.load(file)
+            self.compose_embeddings = loaded_data
+        else:
+            self.compose_embeddings = dict()
+
+        self.retrieve_embeddings = np.loadtxt(osp.join(embedding_dir_path, param.path.retrieve_embedding_file))
+        self.item_cate_map = pd.read_csv(osp.join(data_dir_path, param.path.item_cate_file))
 
         ### Net ###
         self.hash_types = param.net.hash_types
@@ -169,19 +180,9 @@ class Pipeline:
         self.num_recommends_for_composition = param.recommend.num_recommends_for_composition
         self.get_composed_recommendation = param.recommend.get_composed_recommendation
 
-        self._load_storage()
-
-    def _load_storage(self):
-        if osp.exists(self.storage_path):
-            with open(self.storage_path, "rb") as file:
-                loaded_data = pickle.load(file)
-            self.storage = loaded_data
-        else:
-            self.storage = dict()
-
     def compute_score(self, input, olatent, scale=10.0):
         ilatents = [
-            self.storage[v][self.type_selection]
+            self.compose_embeddings[v][self.type_selection]
             for _, v in input.items()
         ]
 
@@ -308,8 +309,8 @@ class Pipeline:
         # Retrieve top imgs from each cate
         for search_cate in self.cates:
             idxs = self.item_cate_map[self.item_cate_map["cate"] == search_cate].index.tolist()
-            item_ids = self.item_cate_map.iloc[idxs, 1].tolist()
-            embeddings = self.image_embeddings[idxs, :]
+            item_ids = self.item_cate_map.iloc[idxs, 0].tolist()
+            embeddings = self.retrieve_embeddings[idxs, :]
             found_image_ids, text_embedding = clip_retrieve(
                 self.clip,
                 image_embeddings=embeddings,
