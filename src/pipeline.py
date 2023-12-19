@@ -139,7 +139,11 @@ class Pipeline:
         else:
             self.compose_embeddings = dict()
 
-        self.retrieve_embeddings = np.loadtxt(osp.join(embedding_dir_path, param.path.retrieve_embedding_file))
+        img_embeddings_path = osp.join(embedding_dir_path, param.path.retrieve_embedding_file)
+        if "txt" in img_embeddings_path:
+            self.retrieve_embeddings = np.loadtxt(img_embeddings_path)
+        else:
+            self.retrieve_embeddings = np.load(img_embeddings_path)            
         self.item_cate_map = pd.read_csv(osp.join(data_dir_path, param.path.item_cate_file))
 
         ### Net ###
@@ -175,6 +179,7 @@ class Pipeline:
 
         ### Recommend ###
         self.cates = param.recommend.cates
+        self.chosen_cates_first = param.recommend.chosen_cates_first
         self.num_outfits = param.recommend.num_outfits
         self.top_k = param.recommend.top_k
         self.num_recommends_for_composition = param.recommend.num_recommends_for_composition
@@ -251,7 +256,6 @@ class Pipeline:
     def outfit_recommend_from_chosen(
         self,
         given_items: list[dict],
-        recommend_choices: list,
         outfit_semantic = None    
     ):
         """Recommend outfit from database
@@ -272,7 +276,11 @@ class Pipeline:
         # Recommend outfit from recommended above
         if self.get_composed_recommendation:  
             for item in given_items:
+                cate = list(item.keys())[0]
                 scores = []
+                recommend_choices = {
+                    k: v for k, v in self.outfit_recommend_option.items() if k != cate
+                }
                 inputs = self.add_inputs(self, [item], recommend_choices.copy())
 
                 for input in inputs:
@@ -284,13 +292,19 @@ class Pipeline:
                 target_arg = sorted(
                     range(len(scores)), key=lambda k: -scores[k]
                 )
-                recommended_outfits = [
-                    inputs[i]
-                    for i in target_arg[: self.num_recommends_for_composition]
-                ][0]
 
-                if recommended_outfits not in outputs["outfit_recommend"]:
-                    outputs["outfit_recommend"].append(recommended_outfits)
+                recommended_outfits = [
+                    inputs[indx]
+                    for indx in target_arg[: self.num_recommends_for_composition]
+                ]
+
+                i = 0
+                recommend_outfit = recommended_outfits[i]
+                while recommend_outfit in outputs["outfit_recommend"]:
+                    i += 1
+                    recommend_outfit = recommended_outfits[i]
+                    
+                outputs["outfit_recommend"].append(recommend_outfit)
 
                 if len(outputs["outfit_recommend"]) >= self.num_outfits:
                     break
@@ -309,7 +323,7 @@ class Pipeline:
         # Retrieve top imgs from each cate
         for search_cate in self.cates:
             idxs = self.item_cate_map[self.item_cate_map["cate"] == search_cate].index.tolist()
-            item_ids = self.item_cate_map.iloc[idxs, 0].tolist()
+            item_ids = self.item_cate_map.iloc[idxs].id.tolist()
             embeddings = self.retrieve_embeddings[idxs, :]
             found_image_ids, text_embedding = clip_retrieve(
                 self.clip,
@@ -332,16 +346,16 @@ class Pipeline:
         # Recommend outfit not from just top items
         # of a particular category exclusively
         # but from top results retrieved of previous model
-        first_cate = "top"
+        # first_cate = "top"
+        # given_items = [{cate: image_id} for image_id in self.outfit_recommend_option[first_cate]]
+        # recommend_choices = {
+        #     k: v for k, v in self.outfit_recommend_option.items() if k != cate
+        # }
 
-        # for image_id in self.outfit_recommend_option[first_cate]:
-        given_items = [{first_cate: image_id} for image_id in self.outfit_recommend_option[first_cate]]
-        recommend_choices = {
-            k: v for k, v in self.outfit_recommend_option.items() if k != first_cate
-        }
+        given_items = [{cate: self.outfit_recommend_option[cate][0]} for cate in self.chosen_cates_first]        
         outputs = self.outfit_recommend_from_chosen(
             given_items=given_items,
-            recommend_choices=recommend_choices,
+            # recommend_choices=recommend_choices,
             outfit_semantic=text_embedding
         )
 
