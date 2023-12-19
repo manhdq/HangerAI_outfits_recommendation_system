@@ -127,9 +127,7 @@ item_cate_map = json.load(open(item2cate_fpath, 'r'))
 if embeddings_file is not None and osp.exists(embeddings_file):
     image_embeddings = np.loadtxt(embeddings_file)
 
-ret = FashionRetrieval(
-    image_embeddings=image_embeddings
-)
+ret = FashionRetrieval()
 
 
 #### GET ####
@@ -435,6 +433,8 @@ def outfits_recommend_from_prompt(
                         break            
 
     elif mode == "each":
+        text_embedding = None
+        
         for search_cate in cates:
             embeddings_file = osp.join(embeddings_dir, f"polyvore_{search_cate}_502.txt")
             image_paths = [
@@ -443,7 +443,7 @@ def outfits_recommend_from_prompt(
             found_image_paths, text_embedding = ret.retrieve(
                 query=processed_text,
                 image_paths=image_paths,
-                # save_embeddings=save_embeddings,
+                text_embedding=text_embedding,
                 embeddings_file=embeddings_file
             )
             prompt_matched_image_paths = found_image_paths[:top_k]
