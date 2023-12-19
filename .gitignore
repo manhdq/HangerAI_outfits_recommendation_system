@@ -7,7 +7,7 @@
 *.net
 *.pyc
 *.pkl
-*.yaml
+TODO.yaml
 __pycache__
 data/
 reproducible_code/
