@@ -1,17 +1,27 @@
-fastapi
-uvicorn
-opencv-python
+# --------- Data --------- #
+pandas
+scipy
+scikit-learn
+termcolor
+nltk
+
+# --------- Recommend --------- #
+fashion-clip
+opencv-python-headless
 numpy
+torch
+seaborn
+torchvision
 scikit-learn
 lmdb
 tensorboardX
-pickle5
-sqlalchemy
-psycopg2-binary
-passlib
-pydantic[email]
-python-jose[cryptography]
-python-multipart
-pyyaml
-Pillow
 icecream
+snoop
+rembg
+albumentations
+omegaconf
+
+# --------- UI & API --------- #
+streamlit
+fastapi
+uvicorn
