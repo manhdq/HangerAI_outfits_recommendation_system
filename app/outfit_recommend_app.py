@@ -74,9 +74,6 @@ else:
                 image = Image.open(osp.join(image_dir, garm_id+".jpg"))
                 image = image_io.expand2square(image)
                 
-                if cate in ["top", "footwear"]:
-                    print(cate, image.size)
-
                 st.image(
                     image,
                     # width=250
