@@ -1,0 +1,29 @@
+path:
+  data_dir_path: /home/dungmaster/Datasets/Fashion-Outfits-Theme-Aware
+  image_dir: images
+  embedding_dir: embeddings
+  item_cate_file: item_cate.csv
+  compose_embedding_file: fhn_embeddings.pkl
+  retrieve_embedding_file: fclip_embeddings.txt
+  encoder_o_trained: data/checkpoints/11_26_23/encoder_o_best_11_26.pt
+  core_trained: data/checkpoints/11_26_23/core_best_11_26.pt
+
+recommend:
+  cates: ["top", "bottom", "bag", "outerwear", "footwear"]
+  num_outfits: 4
+  top_k: 7
+  num_recommends_for_composition: 3
+  get_composed_recommendation: True
+
+net:
+  dim: 128
+  use_outfit_semantic: True
+  outfit_semantic_dim: 512
+  pairwise_weight: 1.0
+  outfit_semantic_weight: 1.5
+  hash_types: 3
+  scale_tanh: True
+  without_binary: False
+  binary01: False
+  score_type_selection: "binary"
+  feature_type_selection: "visual"  
