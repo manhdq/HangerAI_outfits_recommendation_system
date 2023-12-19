@@ -6,7 +6,6 @@ from PIL import Image
 import streamlit as st
 
 import torch
-from lib.api import get_outfit_recommend
 from reproducible_code.tools import image_io
 
 
