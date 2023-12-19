@@ -1,18 +1,19 @@
 path:
-  data_dir_path: /home/dungmaster/Datasets/Fashion-Outfits-Theme-Aware
-  image_dir: images
-  embedding_dir: embeddings
-  item_cate_file: item_cate.csv
-  compose_embedding_file: fhn_embeddings.pkl
-  retrieve_embedding_file: fclip_embeddings.txt
+  data_dir_path: data
+  image_dir: chatbot_images
+  embedding_dir: storages
+  item_cate_file: filter_result.csv
+  compose_embedding_file: hash_apparels_chatbot.pkl
+  retrieve_embedding_file: embedding.npy
   encoder_o_trained: data/checkpoints/11_26_23/encoder_o_best_11_26.pt
   core_trained: data/checkpoints/11_26_23/core_best_11_26.pt
 
 recommend:
-  cates: ["top", "bottom", "bag", "outerwear", "footwear"]
+  cates: ["top", "bottom", "outerwear", "bag", "footwear"]
+  chosen_cates_first: ["top", "outerwear", "bottom", "top"]
   num_outfits: 4
   top_k: 7
-  num_recommends_for_composition: 3
+  num_recommends_for_composition: 10
   get_composed_recommendation: True
 
 net:
