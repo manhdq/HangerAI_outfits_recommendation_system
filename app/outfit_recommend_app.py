@@ -42,6 +42,7 @@ outfit_recommends = json_response["outfit_recommend"]
 ## Showcase api's reponse on web app
 cols = st.columns(num_cols, )
 
+## TODO
 if table_style:
     outfit_df = pd.DataFrame(outfit_recommends)
     image_columns = {
@@ -72,7 +73,7 @@ else:
                     st.header(cate)
 
                 image = Image.open(osp.join(image_dir, garm_id+".jpg"))
-                image = image_io.resize_image(image, base_height=360)
+                image = image_io.expand2square(image)
                 
                 if cate in ["top", "footwear"]:
                     print(cate, image.size)
