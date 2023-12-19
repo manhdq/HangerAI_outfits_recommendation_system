@@ -9,12 +9,12 @@ $ pip install -r requirements.txt
 
 ## RUN
 
-### Api 
+### API
 ```
 $ ./runs/apis/outfit_recommend.sh
 ```
 
-### App
+### APP
 ```
 $ ./runs/apps/outfit_recommend.sh
 ```
