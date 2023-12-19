@@ -42,7 +42,6 @@ def main(config_path: str):
     json_response = response.json()
     outfit_recommends = json_response["outfit_recommend"]
 
-
     ## Showcase api's reponse on web app
     cols = st.columns(num_cols, )
 
@@ -76,12 +75,17 @@ def main(config_path: str):
                     if ind_outfit == 0:
                         st.header(cate)
 
-                    image = Image.open(osp.join(image_dir, garm_id+".jpg"))
-                    image = image_io.expand2square(image)
+                    image_path = osp.join(image_dir, garm_id+".jpg")
+
+                    # image = image_io.load_image(image_path)
+                    # image = image_io.expand2square_cv2(image)
+
+                    image = Image.open(image_path)
+                    image = image_io.expand2square_pil(image)
 
                     st.image(
                         image,
-                        width=250
+                        width=300
                     )
                     ind_garment_retrieved += 1
 
@@ -92,5 +96,5 @@ def main(config_path: str):
 
 
 if __name__ == "__main__":
-    config_path = "configs/outfit_recommend.yaml"
+    config_path = "configs/india_outfit_recommend.yaml"
     main(config_path)
