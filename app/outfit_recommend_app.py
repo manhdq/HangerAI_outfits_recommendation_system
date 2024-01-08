@@ -38,7 +38,7 @@ def expand2square_cv2(
 
 def expand2square_pil(
         img,
-        background_color: Tuple = (255, 255, 255)
+        background_color = (255, 255, 255)
 ):
     """
     From https://note.nkmk.me/en/python-pillow-add-margin-expand-canvas/
@@ -91,7 +91,6 @@ def main(config_path: str):
     )
     assert response.status_code == 200, response.status_code
     json_response = response.json()
-    pprint(json_response)
     outfit_recommends = json_response["outfit_recommend"]
 
     ## Showcase api's reponse on web app
