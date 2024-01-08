@@ -68,7 +68,8 @@ VD:
 ```
 $ python tools/fhn_extract_embeddings.py \
   	 -c configs/FHN_VOE_T3_fashion32.yaml \
-	 -d data/polyvore/images -s data/polyvore/embeddings/fhn_embeddings.pkl
+	 -d data/polyvore/images \
+	 -s data/polyvore/embeddings/fhn_embeddings.pkl
 
 $ python tools/fclip_extract_embeddings.py \
   	 -p data/polyvore/item_cates.csv \
@@ -80,10 +81,10 @@ $ python tools/fclip_extract_embeddings.py \
 ## Configs
 Mặc định code chạy dùng những file config sau đây. Có thể tạo mới hoặc dùng sẵn:
 
-- File config recommend mẫu: [configs/polyvore_outfit_recommend.yaml]()
-- File config model pretrained mẫu: [configs/FHN_VOE_T3_fashion32.yaml]()
+- File config recommend mẫu: [configs/polyvore_outfit_recommend.yaml](configs/polyvore_outfit_recommend.yaml)
+- File config model pretrained mẫu: [configs/FHN_VOE_T3_fashion32.yaml](configs/FHN_VOE_T3_fashion32.yaml)
 
-Sau đó chỉnh đường dẫn đến các file config ở `line 8` file [src/api.py]() và `line 99` file [app/outfit_recommend_app.py]()
+Sau đó chỉnh đường dẫn đến các file config ở `line 8` file [src/api.py](src/api.py) và `line 99` file [app/outfit_recommend_app.py](app/outfit_recommend_app.py)
 
 ## Run
 
