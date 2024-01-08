@@ -11,6 +11,6 @@ config_path = "configs/polyvore_outfit_recommend.yaml"
 model = get_outfit_recommend(config_path)
 
 
-@app.post("/outfits_recommend_from_prompt/")
+@app.post("/outfits_recommend_from_prompt/", status_code=200)
 async def outfit_recommend_from_prompt(prompt: TextInput):
     return model.outfits_recommend_from_prompt(prompt.text)
