@@ -85,7 +85,7 @@ $ python tools/fclip_extract_embeddings.py \
 ## Run
 
 ### Api
-Mở 1 tab chạy api rồi chờ một chút cho đến khi chạy thành công:
+Mở 1 tab chạy api rồi chờ một lúc cho đến khi chạy thành công:
 ```
 $ ./runs/api/outfit_recommend.sh
 ```
