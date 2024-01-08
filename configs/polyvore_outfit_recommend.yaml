@@ -5,8 +5,8 @@ path:
   item_cate_file: item_cates.csv
   compose_embedding_file: fhn_embeddings.pkl
   retrieve_embedding_file: fclip_embeddings.txt
-  encoder_o_trained: data/checkpoints/11_26_23/encoder_o_best_11_26.pt
-  core_trained: data/checkpoints/11_26_23/core_best_11_26.pt
+  encoder_o_trained: data/11_26_23/encoder_o_best_11_26.pt
+  core_trained: data/11_26_23/core_best_11_26.pt
 
 recommend:
   cates: ["top", "bottom", "outerwear", "bag", "shoe"]
