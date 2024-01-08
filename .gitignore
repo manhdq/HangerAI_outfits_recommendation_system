@@ -11,3 +11,4 @@ TODO.yaml
 __pycache__
 data/
 reproducible_code/
+notebooks/
