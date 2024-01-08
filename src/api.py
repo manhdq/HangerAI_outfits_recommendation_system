@@ -7,7 +7,7 @@ class TextInput(BaseModel):
 
 app = FastAPI()
 
-config_path = "configs/india_outfit_recommend.yaml"
+config_path = "configs/polyvore_outfit_recommend.yaml"
 model = get_outfit_recommend(config_path)
 
 
