@@ -7,7 +7,57 @@ import streamlit as st
 from omegaconf import OmegaConf
 
 import torch
-from reproducible_code.tools import image_io
+from icecream import ic
+
+
+def expand2square_cv2(
+        img,
+        fill=255
+):
+    """
+    From https://note.nkmk.me/en/python-pillow-add-margin-expand-canvas/
+
+    Add padding to the short side to 
+    make the image square while maintaining 
+    the aspect ratio of the rectangular image.
+    """
+    height, width, _ = img.shape
+    if width == height:
+        return img
+    elif width > height:
+        result = np.full((width, width, 3), fill)
+        pad_margin = int((width - height) // 2)
+        result[pad_margin:-pad_margin, :, :] = img
+        return result
+    else:
+        result = np.full((height, height, 3), fill)
+        pad_margin = int((height - width) // 2)
+        result[:, pad_margin:-pad_margin, :] = img
+        return result
+
+
+def expand2square_pil(
+        img,
+        background_color: Tuple = (255, 255, 255)
+):
+    """
+    From https://note.nkmk.me/en/python-pillow-add-margin-expand-canvas/
+
+    Add padding to the short side to 
+    make the image square while maintaining 
+    the aspect ratio of the rectangular image.
+    """
+    width, height = img.size
+    if width == height:
+        return img
+    elif width > height:
+        result = Image.new(img.mode, (width, width), background_color)
+        result.paste(img, (0, (width - height) // 2))
+        return result
+    else:
+        result = Image.new(img.mode, (height, height), background_color)
+        result.paste(img, ((height - width) // 2, 0))
+        return result
 
 
 def main(config_path: str):
@@ -39,7 +89,9 @@ def main(config_path: str):
         url="http://127.0.0.1:3000/outfits_recommend_from_prompt/",
         json={"text": prompt},
     )
+    assert response.status_code == 200, response.status_code
     json_response = response.json()
+    pprint(json_response)
     outfit_recommends = json_response["outfit_recommend"]
 
     ## Showcase api's reponse on web app
@@ -77,11 +129,8 @@ def main(config_path: str):
 
                     image_path = osp.join(image_dir, str(garm_id)+".jpg")
 
-                    # image = image_io.load_image(image_path)
-                    # image = image_io.expand2square_cv2(image)
-
                     image = Image.open(image_path)
-                    image = image_io.expand2square_pil(image)
+                    image = expand2square_pil(image)
 
                     st.image(
                         image,
