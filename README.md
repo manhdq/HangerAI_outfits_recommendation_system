@@ -89,11 +89,45 @@ Sau đó chỉnh đường dẫn đến các file config ở `line 8` file [src/
 ## Run
 
 ### Api
+Mở 1 tab chạy:
 ```
 $ ./runs/api/outfit_recommend.sh
 ```
 
+Kết quả ví dụ sẽ có dạng như sau:
+
+```
+{
+         “outfit_recommend”: [
+                {
+                        “top”: 183407434,
+                        “bottom”: 179847434,
+                        “shoe”: 164407434,
+                        "outerwear" 164747434,
+                        "bag": 189484039
+                },
+                {
+                       “top”: 112456444,
+                        “bottom”: 178747894,
+                        “shoe”: 174648409,
+                        "outerwear" 134407434,
+                        "bag": 179407434
+                },
+                {
+                        “top”: 133373934,
+                        “bottom”: 123407434,
+                        “shoe”: 108475434,
+                        "outerwear": 199407434,
+                        "bag": 146573039
+                },
+                …
+        ],
+	 "time": 2.8725521564483643
+}
+```
+
 ### App
+Khi api chạy xong thì mở 1 tab khác chạy:
 ```
 $ ./runs/app/outfit_recommend.sh
 ```
