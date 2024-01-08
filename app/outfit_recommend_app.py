@@ -75,7 +75,7 @@ def main(config_path: str):
                     if ind_outfit == 0:
                         st.header(cate)
 
-                    image_path = osp.join(image_dir, garm_id+".jpg")
+                    image_path = osp.join(image_dir, str(garm_id)+".jpg")
 
                     # image = image_io.load_image(image_path)
                     # image = image_io.expand2square_cv2(image)
@@ -96,5 +96,5 @@ def main(config_path: str):
 
 
 if __name__ == "__main__":
-    config_path = "configs/india_outfit_recommend.yaml"
+    config_path = "configs/polyvore_outfit_recommend.yaml"
     main(config_path)
