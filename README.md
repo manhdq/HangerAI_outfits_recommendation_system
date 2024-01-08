@@ -23,6 +23,14 @@ $ conda activate outfit
 $ pip install -r requirements.txt
 ```
 
+## Configs
+Mặc định code chạy dùng những file config sau đây. Có thể tạo mới hoặc dùng sẵn:
+
+- File config recommend mẫu: [configs/polyvore_outfit_recommend.yaml](configs/polyvore_outfit_recommend.yaml)
+- File config model pretrained mẫu: [configs/FHN_VOE_T3_fashion32.yaml](configs/FHN_VOE_T3_fashion32.yaml)
+
+Sau đó chỉnh đường dẫn đến các file config ở `line 8` file [src/api.py](src/api.py) và `line 99` file [app/outfit_recommend_app.py](app/outfit_recommend_app.py)
+
 ## Data
 
 ```
@@ -41,7 +49,6 @@ $ unzip polyvore.zip
 ### Custom data
 
 - Tạo file csv chứa từng item id với category, ví dụ:
-<p align="center">
 
 id | cate
 --- | ---
@@ -49,8 +56,6 @@ id | cate
 27827 | top
 28787 | bottom
 29288 | shoe
-
-</p>
 
 - Extract feature vector từ ảnh:
 ```
@@ -76,15 +81,6 @@ $ python tools/fclip_extract_embeddings.py \
 	 -d data/polyvore/images \
 	 -s data/polyvore/fclip_embeddings.txt
 ```
-
-
-## Configs
-Mặc định code chạy dùng những file config sau đây. Có thể tạo mới hoặc dùng sẵn:
-
-- File config recommend mẫu: [configs/polyvore_outfit_recommend.yaml](configs/polyvore_outfit_recommend.yaml)
-- File config model pretrained mẫu: [configs/FHN_VOE_T3_fashion32.yaml](configs/FHN_VOE_T3_fashion32.yaml)
-
-Sau đó chỉnh đường dẫn đến các file config ở `line 8` file [src/api.py](src/api.py) và `line 99` file [app/outfit_recommend_app.py](app/outfit_recommend_app.py)
 
 ## Run
 
