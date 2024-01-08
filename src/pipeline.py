@@ -187,7 +187,7 @@ class Pipeline:
 
     def compute_score(self, input, olatent, scale=10.0):
         ilatents = [
-            self.compose_embeddings[v][self.type_selection]
+            self.compose_embeddings[str(v)][self.type_selection]
             for _, v in input.items()
         ]
 
@@ -352,7 +352,14 @@ class Pipeline:
         #     k: v for k, v in self.outfit_recommend_option.items() if k != cate
         # }
 
-        given_items = [{cate: self.outfit_recommend_option[cate][0]} for cate in self.chosen_cates_first]        
+        if isinstance(self.chosen_cates_first, list):
+            given_items = [{cate: self.outfit_recommend_option[cate][0]} for cate in self.chosen_cates_first]
+        elif isinstance(self.chosen_cates_first, str):
+            cate = self.chosen_cates_first
+            given_items = [{cate: image_id} for image_id in self.outfit_recommend_option[cate]]
+        else:
+            raise
+        
         outputs = self.outfit_recommend_from_chosen(
             given_items=given_items,
             # recommend_choices=recommend_choices,
