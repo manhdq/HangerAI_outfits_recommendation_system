@@ -8,60 +8,11 @@ from PIL import Image
 
 from io import BytesIO
 import streamlit as st
+from src.utils.utils import image_to_base64
 from omegaconf import OmegaConf
 
 import torch
 from icecream import ic
-
-
-def expand2square_cv2(
-        img,
-        fill=255
-):
-    """
-    From https://note.nkmk.me/en/python-pillow-add-margin-expand-canvas/
-
-    Add padding to the short side to 
-    make the image square while maintaining 
-    the aspect ratio of the rectangular image.
-    """
-    height, width, _ = img.shape
-    if width == height:
-        return img
-    elif width > height:
-        result = np.full((width, width, 3), fill)
-        pad_margin = int((width - height) // 2)
-        result[pad_margin:-pad_margin, :, :] = img
-        return result
-    else:
-        result = np.full((height, height, 3), fill)
-        pad_margin = int((height - width) // 2)
-        result[:, pad_margin:-pad_margin, :] = img
-        return result
-
-
-def expand2square_pil(
-        img,
-        background_color = (255, 255, 255)
-):
-    """
-    From https://note.nkmk.me/en/python-pillow-add-margin-expand-canvas/
-
-    Add padding to the short side to 
-    make the image square while maintaining 
-    the aspect ratio of the rectangular image.
-    """
-    width, height = img.size
-    if width == height:
-        return img
-    elif width > height:
-        result = Image.new(img.mode, (width, width), background_color)
-        result.paste(img, (0, (width - height) // 2))
-        return result
-    else:
-        result = Image.new(img.mode, (height, height), background_color)
-        result.paste(img, ((height - width) // 2, 0))
-        return result
 
 
 def main(config_path: str):
@@ -89,14 +40,21 @@ def main(config_path: str):
         uploaded_files = st.file_uploader("Upload images", accept_multiple_files=True, type=None)
         st.info("Please refresh the browser if you decide to upload more files to reset the session", icon="🚨")
 
-    # if uploaded_files:
-    #     st.write(f"Number of files uploaded: {len(uploaded_files)}")
-    #     for uploaded_file in uploaded_files:
-    #         bytes_data = uploaded_file.read()    
-    #         print(uploaded_file.name)
+    names = []
+    images = {}
+    input_64s = []
 
-    #         image = np.array(Image.open(uploaded_file))
-    #         print(image.shape)        
+    if uploaded_files:
+        st.write(f"Number of files uploaded: {len(uploaded_files)}")
+        for uploaded_file in uploaded_files:
+            name = uploaded_file.name
+            names.append(name)
+
+            bytes_data = uploaded_file.read()    
+            image = Image.open(uploaded_file)
+            images[name] = image
+            inp_64 = image_to_base64(image)
+            input_64s.append(inp_64)
 
     if len(prompt) == 0:
         prompt = "wedding suit for men"
@@ -105,7 +63,11 @@ def main(config_path: str):
     ## Send request to outfit recommend api
     response = requests.post(
         url="http://127.0.0.1:3000/outfits_recommend_from_inputs/",
-        json={"text": prompt},
+        json={
+            "text": prompt,
+            "name": names,
+            "input64": input_64s,
+        },
     )
     assert response.status_code == 200, response.status_code
     json_response = response.json()
@@ -144,9 +106,10 @@ def main(config_path: str):
                     if ind_outfit == 0:
                         st.header(cate)
 
-                    image_path = osp.join(image_dir, str(garm_id)+".jpg")
+                    # image_path = osp.join(image_dir, str(garm_id)+".jpg")
+                    # image = Image.open(image_path)
 
-                    image = Image.open(image_path)
+                    image = images[garm_id]
                     image = expand2square_pil(image)
 
                     st.image(
