@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import utils
-from utils import config as cfg
+import src.utils as utils
+from src.utils import config as cfg
 from .losses import soft_margin_loss
 from . import backbones as B
 from . import basemodel as M

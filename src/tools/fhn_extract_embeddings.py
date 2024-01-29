@@ -12,11 +12,11 @@ import cv2
 import torch
 import torch.nn.functional as F
 
-import utils
-from utils import config as cfg
-from utils.param import FashionDeployParam
-from model import fashionnet, get_net
-from dataset.transforms import get_img_trans
+from src import utils as utils
+from src.utils import config as cfg
+from src.utils.param import FashionDeployParam
+from src.model import fashionnet, get_net
+from src.dataset.transforms import get_img_trans
 
 
 CATE2ID = cfg.CateIdx
@@ -25,6 +25,10 @@ ID2CATE = {v: k for k, v in CATE2ID.items()}
 
 class Pipeline:
     def __init__(self, config):
+        with open(config, "r") as f:
+            kwargs = yaml.load(f, Loader=yaml.FullLoader)
+        config = FashionDeployParam(**kwargs)
+
         self.net = get_net(config)
         self.transforms = get_img_trans("val", config.test_data_param.image_size)
         self.device = config.gpus[0]
@@ -70,11 +74,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-
-    with open(args.cfg, "r") as f:
-        kwargs = yaml.load(f, Loader=yaml.FullLoader)
-    config = FashionDeployParam(**kwargs)
-    model = Pipeline(config)
+    model = Pipeline(args.cfg)
 
     img_dir = args.img_dir
     img_fns = os.listdir(img_dir)

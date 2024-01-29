@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import config as cfg
+from src.utils import config as cfg
 
 
 def init_weights(m):
