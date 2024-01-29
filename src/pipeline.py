@@ -272,13 +272,40 @@ class Pipeline:
         self,
         fhn_model_config: str,
         prompt: str,
-        # names: List[str],
-        # images: List[str],
+        names: List[str],
+        input64s: List[str],
     ):
         fhn_model = FHN(fhn_model_config)
-        storage = {}
-        for name, inp64 in zip(item_names, input64s):
+        images = []
+        img_ids = []
+        cates = []
+
+        for name, inp64 in zip(names, input64s):
             image = base64_to_image(inp64)
+            (
+                lci_v,
+                lci_s,
+                bci_v,
+                bci_s,
+                cate_prediction,
+            ) = fhn_model.extract_feats_from_one_sample(image)
+            self.compose_embeddings[name] = {
+                "lci_v": lci_v,
+                "lci_s": lci_s,
+                "bci_v": bci_v,
+                "bci_s": bci_s,
+            }            
+
+            images.append(image)
+            img_ids.append(name)
+            cates.append(cate_prediction)
+
+        if len(images) != 0:
+            self.df_item_cate["id"] = img_ids
+            self.df_item_cate["cate"] = cates
+            self.retrieve_embeddings = self.clip.encode_images(images, 32)
+
+        return self.outfits_recommend_from_prompt(prompt)
 
 
 def get_outfit_recommend(config_path: str):
