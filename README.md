@@ -23,32 +23,38 @@ $ conda activate outfit
 $ pip install -r requirements.txt
 ```
 
+## Model Weights
+Tải [pretrained weight](https://drive.google.com/file/d/19TDBoE4qQQg3JLXCbxnXtCCMUmZ7Rbn2/view?usp=drive_link)
+```
+$ unzip checkpoints.zip
+```
+
 ## Configs
 Mặc định code chạy dùng những file config sau đây. Có thể tạo mới hoặc dùng sẵn:
 
 - File config recommend mẫu: [configs/polyvore_outfit_recommend.yaml](configs/polyvore_outfit_recommend.yaml)
 - File config model pretrained mẫu: [configs/FHN_VOE_T3_fashion32.yaml](configs/FHN_VOE_T3_fashion32.yaml)
 
-Sau đó chỉnh đường dẫn đến các file config ở `line 8` file [src/api.py](src/api.py) và `line 99` file [app/outfit_recommend_app.py](app/outfit_recommend_app.py)
+Nếu tạo mới thì cần chỉnh đường dẫn đến các file config này ở `line 10` file [src/api.py](src/api.py) và `line 147` file [app/outfit_recommend_app.py](app/outfit_recommend_app.py).
 
 ## Data
 
 ```
+$ cd ${Đường dẫn đến thư mục của repo này}
 $ mkdir data
+$ cd data
 ```
 
 ### Polyvore
 
-Tải [weight](https://drive.google.com/file/d/19TDBoE4qQQg3JLXCbxnXtCCMUmZ7Rbn2/view?usp=drive_link) và [data polyvore](https://drive.google.com/file/d/1lVZ2Jj6oiL3aOzMN0sgcYUltCgcFMgu_/view?usp=drive_link) để vào trong thư mục data/ dùng để test
+ Tải [data polyvore](https://drive.google.com/file/d/1lVZ2Jj6oiL3aOzMN0sgcYUltCgcFMgu_/view?usp=drive_link) để vào trong thư mục data/ dùng để test
 ```
-$ cd data
-$ unzip checkpoints.zip
 $ unzip polyvore.zip
 ```
 
-### Custom data
+### Custom data (nếu dùng data khác không dùng data Polyvore trên mới làm bước này)
 
-- Tạo file csv chứa từng item id với category, ví dụ:
+- Tạo file csv chứa từng item id với category, ví dụ như ở dưới với tên file là **item_cates.csv** dùng cho ví dụ ở bước sau:
 
 id | cate
 --- | ---
@@ -58,28 +64,13 @@ id | cate
 29288 | shoe
 
 - Extract feature vector từ ảnh:
-```
-$ python tools/fhn_extract_embeddings.py \
-  	 -c ${CONFIG_PATH} \
-	 -d ${IMAGE_DIR} \
-	 -s ${EMBEDDING_FILE}
 
-$ python tools/fclip_extract_embeddings.py \
-  	 -p ${CSV_ITEM_CATE} \
-	 -d ${IMAGE_DIR} \
-	 -s ${EMBEDDING_FILE}	 
+Mẫu ở file [runs/preprocess/fhn_embedding.sh](runs/preprocess/fhn_embedding.sh) và [runs/preprocess/fclip_embedding.sh](runs/preprocess/fclip_embedding.sh)
 ```
-VD:
-```
-$ python tools/fhn_extract_embeddings.py \
-  	 -c configs/FHN_VOE_T3_fashion32.yaml \
-	 -d data/polyvore/images \
-	 -s data/polyvore/embeddings/fhn_embeddings.pkl
-
-$ python tools/fclip_extract_embeddings.py \
-  	 -p data/polyvore/item_cates.csv \
-	 -d data/polyvore/images \
-	 -s data/polyvore/fclip_embeddings.txt
+$ chmod +x runs/preprocess/fhn_embedding.sh
+$ sh runs/preprocess/fhn_embedding.sh
+$ chmod +x runs/preprocess/fclip_embedding.sh
+$ sh runs/preprocess/fclip_embedding.sh
 ```
 
 ## Run
@@ -87,7 +78,7 @@ $ python tools/fclip_extract_embeddings.py \
 ### Api
 Mở 1 tab chạy:
 ```
-$ ./runs/api/outfit_recommend.sh
+$ sh runs/api/outfit_recommend.sh
 ```
 
 Kết quả ví dụ sẽ có dạng như sau:
@@ -125,5 +116,5 @@ Kết quả ví dụ sẽ có dạng như sau:
 ### App
 Khi api chạy xong thì mở 1 tab khác chạy:
 ```
-$ ./runs/app/outfit_recommend.sh
+$ sh runs/app/outfit_recommend.sh
 ```
