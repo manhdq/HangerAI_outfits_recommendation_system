@@ -1,7 +1,5 @@
 import os.path as osp
-from typing import List, Any
 import copy
-import time
 from collections import defaultdict, namedtuple
 import pickle
 import numpy as np
@@ -10,116 +8,9 @@ import pandas as pd
 from omegaconf import OmegaConf
 
 from .base import *
-from fashion_clip.fashion_clip import FashionCLIP
+from .utils import *
 from icecream import ic
 
-
-######## Global Variable ##########
-NO_WEIGHTED_HASH = 0
-WEIGHTED_HASH_U = 1
-WEIGHTED_HASH_I = 2
-WEIGHTED_HASH_BOTH = 3
-
-
-######## Important Functions & Classes ##########
-norm = lambda x: np.linalg.norm(x, ord=2, axis=-1, keepdims=True)
-name = lambda x: osp.basename(x).split('.')[0]
-
-class Param(dict):
-    def __init__(self, *args, **kwargs):
-        super(Param, self).__init__(*args, **kwargs)
-        self.__dict__ = self
-
-
-def calculate_time(func):
-
-    def timing(*args, **kwargs):
-        t1 = time.time()
-        outputs = func(*args, **kwargs)
-        t2 = time.time()
-        print(f"Time: {(t2-t1):.3f}s")
-
-        return outputs
-
-    return timing
-
-
-def get_pretrained(net, path, device):
-    # Load model from pre-trained file
-    num_devices = torch.cuda.device_count()
-    map_location = {"cuda:{}".format(i): "cpu" for i in range(num_devices)}
-    print(f"Load trained model from {path}")
-    state_dict = torch.load(path, map_location=map_location)
-
-    # load pre-trained model
-    net.load_state_dict(state_dict)
-    net.cuda(device=device)
-    net.eval()  # Unable training
-    return net    
-
-
-######## Main Pipeline ##########
-
-def clip_retrieve(
-    model,
-    image_embeddings: np.ndarray,
-    image_paths: List[str],
-    text_embedding: np.ndarray = None,
-    query: str = None,
-    encode_images_func: Any = None,
-    encode_text_func: Any = None,
-    embeddings_file: str = None,
-    save_embeddings: bool = False,
-    batch_size: int = 64,
-    verbose: bool = False
-):
-    """Search top images predicted by the model according to query
-
-    Args:
-        query (str): input query to search for fashion item
-        image_paths (List[str]): list of image paths to retrieve from
-        encode_images_func (Any): function to encode images
-        encode_text_func (Any): function to encode texts
-        embeddings_file (str): absolute or relative path to image embeddings file
-        save_embeddings (bool): whether to save embeddings into a file
-        batch_size (int): number of items in a batch to process
-
-    Returns:
-        List[str]: list of result image paths sorted by rank
-        np.ndarray: text embedding for later use
-    """
-    if text_embedding is None:
-        if verbose:
-            print("Embedding text...")
-        text_embedding = (
-            encode_text_func if encode_text_func else model.encode_text
-        )([query], batch_size)[0]
-        text_embedding = text_embedding[np.newaxis, ...]
-
-    if image_embeddings is None:
-        image_embeddings = (
-            encode_images_func
-            if encode_images_func
-            else model.encode_images
-        )(image_paths, batch_size=batch_size)
-
-        if embeddings_file is not None and save_embeddings:
-            print("Save image embeddings...")
-            np.savetxt(embeddings_file, image_embeddings)
-
-    image_embeddings = image_embeddings / norm(image_embeddings)
-
-    if verbose:
-        print("Find matching fashion items...")
-    cosine_sim = model._cosine_similarity(
-        text_embedding, image_embeddings, normalize=True
-    )
-    inds = cosine_sim.argsort()[:, ::-1]
-    inds = inds.squeeze().tolist()
-    rank_image_paths = [image_paths[ind] for ind in inds]
-
-    return rank_image_paths, text_embedding
-    
 
 class Pipeline:
     def __init__(self, param, device): 
@@ -127,6 +18,20 @@ class Pipeline:
         self.outfit_recommend_option = defaultdict(list)
 
         ### Paths ###
+        self._load_storage(param)
+
+        ### Net ###
+        self._load_net(param, device)
+
+        ### Recommend ###
+        self.cates = param.recommend.cates
+        self.chosen_cates_first = param.recommend.chosen_cates_first
+        self.num_outfits = param.recommend.num_outfits
+        self.top_k = param.recommend.top_k
+        self.num_recommends_for_composition = param.recommend.num_recommends_for_composition
+        self.get_composed_recommendation = param.recommend.get_composed_recommendation
+
+    def _load_storage(self, param):
         data_dir_path = param.path.data_dir_path
         embedding_dir_path = osp.join(data_dir_path, param.path.embedding_dir)
 
@@ -144,9 +49,9 @@ class Pipeline:
             self.retrieve_embeddings = np.loadtxt(img_embeddings_path)
         else:
             self.retrieve_embeddings = np.load(img_embeddings_path)            
-        self.item_cate_map = pd.read_csv(osp.join(data_dir_path, param.path.item_cate_file))
+        self.item_cate_map = pd.read_csv(osp.join(data_dir_path, param.path.item_cate_file))        
 
-        ### Net ###
+    def _load_net(self, param, device):
         self.hash_types = param.net.hash_types
         self.use_outfit_semantic = param.net.use_outfit_semantic
 
@@ -176,15 +81,7 @@ class Pipeline:
                 "semantic": "bci_s",
             },
         }[param.net.score_type_selection][param.net.feature_type_selection]
-
-        ### Recommend ###
-        self.cates = param.recommend.cates
-        self.chosen_cates_first = param.recommend.chosen_cates_first
-        self.num_outfits = param.recommend.num_outfits
-        self.top_k = param.recommend.top_k
-        self.num_recommends_for_composition = param.recommend.num_recommends_for_composition
-        self.get_composed_recommendation = param.recommend.get_composed_recommendation
-
+        
     def compute_score(self, input, olatent, scale=10.0):
         ilatents = [
             self.compose_embeddings[str(v)][self.type_selection]
