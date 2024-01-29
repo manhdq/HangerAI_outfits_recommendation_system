@@ -76,7 +76,7 @@ $ sh runs/preprocess/fclip_embedding.sh
 ## Run
 
 ### Api
-Mở 1 tab chạy:
+Mở 1 tab chạy api rồi chờ một lúc cho đến khi chạy thành công:
 ```
 $ sh runs/api/outfit_recommend.sh
 ```
@@ -114,7 +114,7 @@ Kết quả ví dụ sẽ có dạng như sau:
 ```
 
 ### App
-Khi api chạy xong thì mở 1 tab khác chạy:
+Cùng lúc api chạy  thì mở 1 tab khác chạy:
 ```
 $ sh runs/app/outfit_recommend.sh
 ```
