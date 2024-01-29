@@ -8,7 +8,8 @@ import pandas as pd
 from omegaconf import OmegaConf
 
 from .base import *
-from .utils import *
+from .utils.utils import *
+from .tools.fhn_extract_embeddings import Pipeline as FHN
 from icecream import ic
 
 
@@ -21,7 +22,7 @@ class Pipeline:
         self._load_storage(param)
 
         ### Net ###
-        self._load_net(param, device)
+        self._load_net(param)
 
         ### Recommend ###
         self.cates = param.recommend.cates
@@ -51,7 +52,7 @@ class Pipeline:
             self.retrieve_embeddings = np.load(img_embeddings_path)            
         self.item_cate_map = pd.read_csv(osp.join(data_dir_path, param.path.item_cate_file))        
 
-    def _load_net(self, param, device):
+    def _load_net(self, param):
         self.hash_types = param.net.hash_types
         self.use_outfit_semantic = param.net.use_outfit_semantic
 
@@ -66,10 +67,10 @@ class Pipeline:
                 ]
             )
 
-        self.core = get_pretrained(core, param.path.core_trained, device)
+        self.core = get_pretrained(core, param.path.core_trained, self.device)
         if self.use_outfit_semantic:
             encoder_o = TxtEncoder(param.net.outfit_semantic_dim, param.net)
-            self.encoder_o = get_pretrained(encoder_o, param.path.encoder_o_trained, device)
+            self.encoder_o = get_pretrained(encoder_o, param.path.encoder_o_trained, self.device)
 
         self.type_selection = {
             "latent": {
@@ -266,6 +267,18 @@ class Pipeline:
         self.outfit_recommend_option.clear()
 
         return outputs
+    
+    def outfits_recommend_from_inputs(
+        self,
+        fhn_model_config: str,
+        prompt: str,
+        # names: List[str],
+        # images: List[str],
+    ):
+        fhn_model = FHN(fhn_model_config)
+        storage = {}
+        for name, inp64 in zip(item_names, input64s):
+            image = base64_to_image(inp64)
 
 
 def get_outfit_recommend(config_path: str):
