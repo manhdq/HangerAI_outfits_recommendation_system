@@ -21,6 +21,7 @@ Project này được dùng để gợi ý trang phục
 $ conda create -n outfit python=3.11
 $ conda activate outfit
 $ pip install -r requirements.txt
+$ cd ${PATH tới repo này}
 ```
 
 ## Model Weights
@@ -40,7 +41,6 @@ Nếu tạo mới thì cần chỉnh đường dẫn đến các file config nà
 ## Data
 
 ```
-$ cd ${Đường dẫn đến thư mục của repo này}
 $ mkdir data
 $ cd data
 ```
