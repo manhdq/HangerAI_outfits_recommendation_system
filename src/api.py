@@ -21,16 +21,15 @@ async def outfit_recommend_from_prompt(prompt: TextInput):
 ## TODO
 @app.post("/outfits_recommend_from_inputs/", status_code=200)
 async def outfit_recommend_from_inputs(
-    # data_input: ApparelsInput
-    prompt: TextInput
+    data_input: ApparelsInput
 ):
-    # prompt = data_input.text
-    # item_names = data_input.name
-    # input64s = data_input.input64
+    prompt = data_input.text
+    item_names = data_input.name
+    input64s = data_input.input64
 
     return model.outfits_recommend_from_inputs(
         fhn_config_path,
         prompt,
-        # item_names,
-        # input64s
+        item_names,
+        input64s
     )
